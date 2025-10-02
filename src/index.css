@@ -276,7 +276,7 @@ img, video, canvas, svg {
 
 /* Ticket-style E‑Pass (rectangle) */
 .epass-ticket { padding: 0; border-radius: 8px; }
-.ticket-head { background: #fff; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+.ticket-head { background: #fff; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: center; align-items: center; }
 .ticket-brand { display: flex; align-items: center; gap: 10px; color: #0f172a; }
 .ticket-brand-text .title { font-weight: 900; font-size: 18px; letter-spacing: 1px; line-height: 1; }
 .ticket-brand-text .sub { font-size: 11px; color: #6b7280; line-height: 1.2; }
