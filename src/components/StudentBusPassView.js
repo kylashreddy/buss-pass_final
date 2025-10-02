@@ -67,8 +67,8 @@ function StudentBusPassView() {
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ y: -2 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="epass-card"
-        style={{ width: 'min(500px, 94vw)' }}
+className="epass-card"
+        style={{ width: 'min(380px, 96vw)' }}
       >
         {/* Header band */}
         <div className="epass-header">
