@@ -18,6 +18,8 @@ import AdminComplaints from './components/AdminComplaints';
 import StudentBusPassView from './components/StudentBusPassView';
 import Navbar from "./components/Navbar";
 import ContactUs from "./components/ContactUs";
+import AdminUsersTable from './components/AdminUsersTable';
+import AdminLoginLogs from './components/AdminLoginLogs';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -216,7 +218,39 @@ function App() {
                 path="/admin/requests"
                 element={
                   <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <AdminDashboard />
+                    <AdminDashboard filterProfileType="all" />
+                  </motion.div>
+                }
+              />
+
+              {/* Users tables */}
+              <Route
+                path="/admin/users"
+                element={<Navigate to="/admin/users/students" replace />}
+              />
+              <Route
+                path="/admin/users/students"
+                element={
+                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                    <AdminUsersTable roleFilter="student" />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/admin/users/teachers"
+                element={
+                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                    <AdminUsersTable roleFilter="teacher" />
+                  </motion.div>
+                }
+              />
+
+              {/* Login log */}
+              <Route
+                path="/admin/logins"
+                element={
+                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                    <AdminLoginLogs />
                   </motion.div>
                 }
               />

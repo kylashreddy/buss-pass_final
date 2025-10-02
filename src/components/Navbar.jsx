@@ -41,10 +41,19 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
         <Link to="/home" style={navLinkStyle}>Home</Link>
       </li>
       <li>
-        <a href="/admin/requests" style={{ ...navLinkStyle, color: "#18193F", background: "#FFD700" }}>Requests</a>
+        <Link to="/admin/requests" style={{ ...navLinkStyle, color: "#18193F", background: "#FFD700" }}>Requests</Link>
       </li>
       <li>
-        <a href="/admin/complaints" style={navLinkStyle}>Complaints</a>
+        <Link to="/admin/users/students" style={navLinkStyle}>Students</Link>
+      </li>
+      <li>
+        <Link to="/admin/users/teachers" style={navLinkStyle}>Teachers</Link>
+      </li>
+      <li>
+        <Link to="/admin/logins" style={navLinkStyle}>Login Log</Link>
+      </li>
+      <li>
+        <Link to="/admin/complaints" style={navLinkStyle}>Complaints</Link>
       </li>
     </>
   );

@@ -72,6 +72,9 @@ function StudentBusPassView() {
       >
         {/* Ticket header with brand */}
         <div className="ticket-head">
+          <div className="ticket-brand">
+            <img src="/logo.png" alt="CampusBus Logo" className="ticket-logo" />
+          </div>
           <div className={`ticket-status ${busPass.status || 'pending'}`}>
             {(busPass.status || 'pending').toUpperCase()}
           </div>
@@ -107,15 +110,8 @@ function StudentBusPassView() {
 
         {/* Status badge */}
         <div className={`epass-status ${busPass.status || 'pending'}`}>
-          <div className="epass-brand">
-            <img src="/logo.png" alt="CampusBus" className="epass-logo" />
-            <div>
-              <div className="epass-brand-title">JAIN</div>
-              <div className="epass-brand-sub">Faculty of Engineering & Technology</div>
-            </div>
-          </div>
-          <div className="epass-title">CAMPUSBUS E‑PASS</div>
-          <div className="epass-chip" aria-hidden />
+         
+          
         </div>
 
         {/* Body */}

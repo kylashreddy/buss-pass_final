@@ -3,37 +3,44 @@ import React, { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore";
 
-function AdminDashboard() {
+function AdminDashboard({ filterProfileType = "all" }) {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch only pending bus pass requests
+  // Fetch only pending bus pass requests (optionally filtered by profile type)
   useEffect(() => {
-    const q = query(
-      collection(db, "busPassRequests"),
-      where("status", "==", "pending")
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const requests = [];
-        querySnapshot.forEach((document) => {
-          requests.push({ id: document.id, ...document.data() });
-        });
-        setPendingRequests(requests);
-        setLoading(false);
-      },
-      (err) => {
-        console.error("Error fetching requests:", err);
-        setError("Failed to load requests: " + err.message);
-        setLoading(false);
+    try {
+      const conditions = [where("status", "==", "pending")];
+      if (filterProfileType && filterProfileType !== "all") {
+        conditions.push(where("profileType", "==", filterProfileType));
       }
-    );
+      const q = query(collection(db, "busPassRequests"), ...conditions);
 
-    return () => unsubscribe();
-  }, []);
+      const unsubscribe = onSnapshot(
+        q,
+        (querySnapshot) => {
+          const requests = [];
+          querySnapshot.forEach((document) => {
+            requests.push({ id: document.id, ...document.data() });
+          });
+          setPendingRequests(requests);
+          setLoading(false);
+        },
+        (err) => {
+          console.error("Error fetching requests:", err);
+          setError("Failed to load requests: " + err.message);
+          setLoading(false);
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.error("Error preparing query:", err);
+      setError("Failed to prepare request query: " + err.message);
+      setLoading(false);
+    }
+  }, [filterProfileType]);
 
   const handleApprove = async (requestId) => {
     try {
@@ -70,9 +77,17 @@ function AdminDashboard() {
   if (loading) return <p>Loading requests...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
+  const label =
+    filterProfileType === "student"
+      ? "Students"
+      : filterProfileType === "teacher"
+      ? "Teachers"
+      : "All Profiles";
+
   return (
     <div style={{ padding: "20px" }}>
-      <h2 style={{ marginBottom: "20px", textAlign: "center" }}>📋 Pending Bus Pass Requests</h2>
+      <h2 style={{ marginBottom: "6px", textAlign: "center" }}>📋 Pending Bus Pass Requests</h2>
+      <p style={{ marginTop: 0, textAlign: "center", color: "#6b7280" }}>Filter: {label}</p>
       {pendingRequests.length === 0 ? (
         <p>No pending requests 🎉</p>
       ) : (
@@ -89,7 +104,7 @@ function AdminDashboard() {
           >
             <thead style={{ background: "#f3f3f3" }}>
               <tr>
-                <th style={thStyle}>Student Name</th>
+                <th style={thStyle}>Name</th>
                 <th style={thStyle}>USN</th>
                 <th style={thStyle}>Route</th>
                 <th style={thStyle}>Pickup Point</th>

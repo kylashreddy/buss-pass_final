@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { motion } from 'framer-motion';
 
@@ -25,7 +25,24 @@ function LoginForm({ onSwitchToRegister }) {
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
-        const role = userDocSnap.data().role;
+        const profile = userDocSnap.data();
+        const role = profile.role;
+
+        // Log successful login
+        try {
+          await addDoc(collection(db, "loginLogs"), {
+            userId: user.uid,
+            email: profile.email || user.email || null,
+            name: profile.name || null,
+            usn: profile.usn || null,
+            role: role || null,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+            platform: typeof navigator !== 'undefined' ? navigator.platform : null,
+            timestamp: new Date(),
+          });
+        } catch (logErr) {
+          console.warn("Failed to write login log:", logErr);
+        }
 
         if (role === "student") {
           navigate("/epass");
