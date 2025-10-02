@@ -74,10 +74,6 @@ function StudentBusPassView() {
         <div className="ticket-head">
           <div className="ticket-brand">
             <img src="/logo.png" alt="CampusBus Logo" className="ticket-logo" />
-            <div className="ticket-brand-text">
-              <div className="title">JAIN</div>
-              <div className="sub">Faculty of Engineering & Technology</div>
-            </div>
           </div>
           <div className={`ticket-status ${busPass.status || 'pending'}`}>
             {(busPass.status || 'pending').toUpperCase()}
