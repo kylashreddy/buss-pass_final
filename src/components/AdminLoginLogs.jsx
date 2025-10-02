@@ -9,8 +9,8 @@ function AdminLoginLogs() {
 
   useEffect(() => {
     try {
-      // Show latest 200 logins
-      const q = query(collection(db, "loginLogs"));
+      // Show latest 200 logins (ordered by timestamp desc)
+      const q = query(collection(db, "loginLogs"), orderBy("timestamp", "desc"), limit(200));
       const unsub = onSnapshot(
         q,
         (snap) => {

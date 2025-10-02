@@ -4,7 +4,7 @@ import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { motion } from 'framer-motion';
 import AnimatedCursor from './components/AnimatedCursor';
 import TrackingPlaceholder from './components/TrackingPlaceholder';
@@ -45,6 +45,27 @@ function App() {
           } else {
             // If no doc yet, assume student (SignUpForm writes one)
             setUserRole("student");
+          }
+
+          // Log login on session restore or external login (avoid duplicate if already logged via LoginForm)
+          try {
+            const sessionKey = `loginLogged:${currentUser.uid}`;
+            if (!sessionStorage.getItem(sessionKey)) {
+              const profile = userDocSnap.exists() ? userDocSnap.data() : null;
+              await addDoc(collection(db, "loginLogs"), {
+                userId: currentUser.uid,
+                email: (profile && profile.email) || currentUser.email || null,
+                name: (profile && profile.name) || null,
+                usn: (profile && profile.usn) || null,
+                role: (profile && profile.role) || null,
+                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+                platform: typeof navigator !== 'undefined' ? navigator.platform : null,
+                timestamp: serverTimestamp(),
+              });
+              sessionStorage.setItem(sessionKey, "1");
+            }
+          } catch (logErr) {
+            console.warn("Login log (App) failed:", logErr);
           }
 
           // Only check passes for students

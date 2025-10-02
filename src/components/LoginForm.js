@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc, collection, addDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { motion } from 'framer-motion';
 
@@ -24,31 +24,37 @@ function LoginForm({ onSwitchToRegister }) {
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
+      let profile = null;
+      let role = null;
       if (userDocSnap.exists()) {
-        const profile = userDocSnap.data();
-        const role = profile.role;
+        profile = userDocSnap.data();
+        role = profile.role;
+      }
 
-        // Log successful login
+      // Log successful login (guard against duplicate logs in same session)
+      const sessionKey = `loginLogged:${user.uid}`;
+      if (!sessionStorage.getItem(sessionKey)) {
         try {
           await addDoc(collection(db, "loginLogs"), {
             userId: user.uid,
-            email: profile.email || user.email || null,
-            name: profile.name || null,
-            usn: profile.usn || null,
+            email: (profile && profile.email) || user.email || null,
+            name: (profile && profile.name) || null,
+            usn: (profile && profile.usn) || null,
             role: role || null,
             userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
             platform: typeof navigator !== 'undefined' ? navigator.platform : null,
-            timestamp: new Date(),
+            timestamp: serverTimestamp(),
           });
+          sessionStorage.setItem(sessionKey, "1");
         } catch (logErr) {
           console.warn("Failed to write login log:", logErr);
         }
+      }
 
-        if (role === "student") {
-          navigate("/epass");
-        } else {
-          setError("Only student login is allowed.");
-        }
+      if (role === "student") {
+        navigate("/epass");
+      } else {
+        setError("Only student login is allowed.");
       }
 
       setEmail("");
