@@ -61,20 +61,26 @@ function StudentBusPassView() {
   const validUntilText = validUntil ? validUntil.toLocaleDateString() : '—';
 
   return (
-    <div className="page-content" style={{ display: "flex", justifyContent: "center" }}>
+    <div className="page-content" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ y: -2 }}
-transition={{ duration: 0.35, ease: 'easeOut' }}
-className="epass-card epass-ticket"
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="epass-card epass-ticket"
         style={{ width: 'min(420px, 96vw)' }}
       >
         {/* Ticket header with brand */}
         <div className="ticket-head">
           <div className="ticket-brand">
-            <img src="/logo.png" alt="CampusBus" className="ticket-logo" />
-            <span>CampusBus</span>
+            <img src="/logo.png" alt="CampusBus Logo" className="ticket-logo" />
+            <div className="ticket-brand-text">
+              <div className="title">JAIN</div>
+              <div className="sub">Faculty of Engineering & Technology</div>
+            </div>
+          </div>
+          <div className={`ticket-status ${busPass.status || 'pending'}`}>
+            {(busPass.status || 'pending').toUpperCase()}
           </div>
         </div>
 
@@ -155,11 +161,6 @@ className="epass-card epass-ticket"
               <span>Authorised Signatory</span>
             </div>
           </div>
-        </div>
-
-        {/* Status badge */}
-        <div className={`epass-status ${busPass.status || 'pending'}`}>
-          {(busPass.status || 'pending').toUpperCase()}
         </div>
       </motion.div>
     </div>
