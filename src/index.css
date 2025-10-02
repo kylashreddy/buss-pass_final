@@ -281,10 +281,13 @@ img, video, canvas, svg {
 .ticket-brand-text .title { font-weight: 900; font-size: 18px; letter-spacing: 1px; line-height: 1; }
 .ticket-brand-text .sub { font-size: 11px; color: #6b7280; line-height: 1.2; }
 .ticket-logo { width: 28px; height: 28px; border-radius: 6px; background: #fff; }
+.ticket-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; max-width: 65%; }
+.ticket-name { font-weight: 800; font-size: 16px; color: #0f172a; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ticket-status { padding: 4px 10px; font-size: 12px; font-weight: 800; color: #fff; border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
 .ticket-status.approved { background: #22c55e; }
 .ticket-status.pending { background: #f59e0b; }
 .ticket-status.rejected { background: #ef4444; }
+@media (max-width: 360px) { .ticket-name { font-size: 14px; } }
 .ticket-profile { display: flex; align-items: center; gap: 12px; padding: 12px; }
 .ticket-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280; display: flex; align-items: center; justify-content: center; }
 .ticket-profile-info .name { font-weight: 700; font-size: 16px; color: #0f172a; }
