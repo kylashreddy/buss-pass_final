@@ -61,7 +61,7 @@ function StudentBusPassView() {
   const validUntilText = validUntil ? validUntil.toLocaleDateString() : '—';
 
   return (
-    <div className="page-content" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+<div className="page-content" style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", marginTop: "8px" }}>
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -110,11 +110,6 @@ function StudentBusPassView() {
           </ul>
           <div className="ticket-time">Issued {approvedAt ? approvedAt.toLocaleString() : '—'}</div>
 
-          <div className="ticket-qr-wrap">
-            <div className="ticket-qr" aria-label="QR code placeholder">
-              <QrCode size={28} />
-            </div>
-          </div>
         </div>
 
         {/* Status badge */}
