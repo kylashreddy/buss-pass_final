@@ -281,3 +281,8 @@
   background: #357abd;
 }
 
+/* Small-screen refinements */
+@media (max-width: 640px) {
+  .auth-container { padding-top: 60px; gap: 20px; }
+  .card { padding: 24px; }
+}
