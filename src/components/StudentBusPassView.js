@@ -66,12 +66,53 @@ function StudentBusPassView() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ y: -2 }}
-        transition={{ duration: 0.35, ease: 'easeOut' }}
-className="epass-card"
-        style={{ width: 'min(380px, 96vw)' }}
+transition={{ duration: 0.35, ease: 'easeOut' }}
+className="epass-card epass-ticket"
+        style={{ width: 'min(420px, 96vw)' }}
       >
-        {/* Header band */}
-        <div className="epass-header">
+        {/* Ticket header with brand */}
+        <div className="ticket-head">
+          <div className="ticket-brand">
+            <img src="/logo.png" alt="CampusBus" className="ticket-logo" />
+            <span>CampusBus</span>
+          </div>
+        </div>
+
+        {/* Profile row */}
+        <div className="ticket-profile">
+          {busPass.photoUrl ? (
+            <img src={busPass.photoUrl} alt="Profile" className="ticket-photo" />
+          ) : (
+            <div className="ticket-photo placeholder"><User size={18} /></div>
+          )}
+          <div className="ticket-profile-info">
+            <div className="name">{busPass.studentName}</div>
+            <div className="muted">USN: {busPass.usn}</div>
+            <div className="muted">Profile: {busPass.profileType || 'Student'} • Year: {busPass.year || '—'}</div>
+          </div>
+        </div>
+
+        <div className="ticket-divider" />
+
+        {/* Details section */}
+        <div className="ticket-body">
+          <div className="ticket-section-title">Campus E‑Pass</div>
+          <ul className="ticket-list">
+            <li><Bus size={16} /><span>{busPass.routeName}</span></li>
+            <li><MapPin size={16} /><span>{busPass.pickupPoint}</span></li>
+            <li><RouteIcon size={16} /><span>Valid until: {validUntilText}</span></li>
+          </ul>
+          <div className="ticket-time">Issued {approvedAt ? approvedAt.toLocaleString() : '—'}</div>
+
+          <div className="ticket-qr-wrap">
+            <div className="ticket-qr" aria-label="QR code placeholder">
+              <QrCode size={28} />
+            </div>
+          </div>
+        </div>
+
+        {/* Status badge */}
+        <div className={`epass-status ${busPass.status || 'pending'}`}>
           <div className="epass-brand">
             <img src="/logo.png" alt="CampusBus" className="epass-logo" />
             <div>

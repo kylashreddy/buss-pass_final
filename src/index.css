@@ -273,3 +273,31 @@ img, video, canvas, svg {
 @media (prefers-reduced-motion: reduce) {
   .hero-glow { display:none; }
 }
+
+/* Ticket-style E‑Pass (rectangle) */
+.epass-ticket { padding: 0; border-radius: 8px; }
+.ticket-head { background: #fff; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: center; }
+.ticket-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; letter-spacing: .5px; color: #0f172a; }
+.ticket-logo { width: 28px; height: 28px; border-radius: 6px; background: #fff; }
+.ticket-profile { display: flex; align-items: center; gap: 12px; padding: 12px; }
+.ticket-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280; display: flex; align-items: center; justify-content: center; }
+.ticket-profile-info .name { font-weight: 700; font-size: 16px; color: #0f172a; }
+.ticket-profile-info .muted { font-size: 12px; color: #6b7280; }
+.ticket-divider { height: 1px; background: #e5e7eb; margin: 0 12px; }
+.ticket-body { padding: 12px; }
+.ticket-section-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+.ticket-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ticket-list li { display: flex; align-items: center; gap: 8px; color: #111827; font-size: 14px; }
+.ticket-time { margin: 10px 0; font-size: 12px; color: #374151; }
+.ticket-qr-wrap { display: flex; justify-content: center; padding: 8px 0 12px; }
+.ticket-qr { width: 128px; height: 128px; border-radius: 8px; background:
+  repeating-linear-gradient(0deg, #0f172a 0 6px, transparent 6px 12px),
+  repeating-linear-gradient(90deg, #0f172a 0 6px, transparent 6px 12px);
+  background-blend-mode: multiply; background-color: #fff; box-shadow: inset 0 0 0 1px #e5e7eb; display: flex; align-items: center; justify-content: center; }
+
+@media (max-width: 420px) {
+  .ticket-qr { width: 112px; height: 112px; }
+  .ticket-profile { padding: 10px; gap: 10px; }
+  .ticket-body { padding: 10px; }
+  .ticket-section-title { font-size: 14px; }
+}
