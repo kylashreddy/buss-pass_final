@@ -1,142 +1,278 @@
 // src/components/AllData.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { db } from "../firebase";
-import { collection, getDocs } from "firebase/firestore"; // ✅ Removed getCollections
-import * as XLSX from "xlsx"; // For Excel export
-import jsPDF from "jspdf";   // For PDF export
-import "jspdf-autotable";    // For table support in PDF
+import { collection, getDocs } from "firebase/firestore";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";  // ✅ not just "import 'jspdf-autotable'"
+import "jspdf-autotable";
+import { Filter, FileText, FileSpreadsheet } from "lucide-react";
+
+const COLLECTIONS_TO_FETCH = [
+  "busPassRequests",
+  "route-1","route-2","route-3","route-4","route-5","route-6",
+  "route-7","route-8","route-9","route-10","route-11","route-12"
+];
+
+const formatReqDate = (req) => {
+  if (req.requestDate) {
+    const date = req.requestDate.toDate
+      ? req.requestDate.toDate()
+      : new Date(req.requestDate.seconds * 1000);
+    return date.toLocaleDateString();
+  }
+  return "N/A";
+};
 
 function AllData() {
-  const [routeData, setRouteData] = useState({});
+  const [allRequests, setAllRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState("all");
 
   useEffect(() => {
-    const fetchAllRoutes = async () => {
+    const fetchAllRequests = async () => {
+      setLoading(true);
       try {
-        // Define route collections manually (route-1 to route-12)
-        const routeCollections = [...Array(12)].map((_, i) => `route-${i + 1}`);
-        let dataByRoute = {};
-
-        for (const route of routeCollections) {
-          const snapshot = await getDocs(collection(db, route));
-          dataByRoute[route] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        let requests = [];
+        for (const colId of COLLECTIONS_TO_FETCH) {
+          const snapshot = await getDocs(collection(db, colId));
+          snapshot.docs.forEach((doc) => {
+            requests.push({
+              id: doc.id,
+              sourceCollection: colId,
+              ...doc.data(),
+            });
+          });
         }
-
-        setRouteData(dataByRoute);
-        setLoading(false);
+        setAllRequests(requests);
       } catch (error) {
-        console.error("Error fetching route data:", error);
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchAllRoutes();
+    fetchAllRequests();
   }, []);
 
-  // ✅ Export to Excel (route-wise sheets)
-  const exportToExcel = () => {
-    const workbook = XLSX.utils.book_new();
+  // Filter & group
+  const filteredAndGroupedData = useMemo(() => {
+    let filtered = allRequests;
+    if (filterType !== "all") {
+      filtered = allRequests.filter(
+        (req) => (req.profileType || "student") === filterType
+      );
+    }
+    return filtered.reduce((acc, req) => {
+      const routeKey = req.routeName ?? req.sourceCollection;
+      if (!acc[routeKey]) acc[routeKey] = [];
+      acc[routeKey].push(req);
+      return acc;
+    }, {});
+  }, [allRequests, filterType]);
 
-    Object.keys(routeData).forEach((routeId) => {
-      const data = routeData[routeId].map((req) => ({
-        "Student Name": req.studentName,
-        "USN": req.usn,
-        "Pickup Point": req.pickupPoint,
-        "Status": req.status,
-        "Request Date": req.requestDate
-          ? new Date(req.requestDate.seconds * 1000).toLocaleString()
-          : "N/A",
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(data);
-      XLSX.utils.book_append_sheet(workbook, worksheet, routeId.toUpperCase());
+  // 🔹 Sort routes in order
+  const getSortedRoutes = (dataObj) => {
+    return Object.entries(dataObj).sort(([a], [b]) => {
+      if (a === "busPassRequests") return -1;
+      if (b === "busPassRequests") return 1;
+      const numA = parseInt(a.replace("route-", "")) || 0;
+      const numB = parseInt(b.replace("route-", "")) || 0;
+      return numA - numB;
     });
-
-    XLSX.writeFile(workbook, "BusPassRequests.xlsx");
   };
 
-  // ✅ Export to PDF (route-wise tables)
+  // Export helpers
+  const formatExportDate = (req) =>
+    req.requestDate
+      ? req.requestDate.toDate
+        ? req.requestDate.toDate().toLocaleString()
+        : new Date(req.requestDate.seconds * 1000).toLocaleString()
+      : "N/A";
+
+  const exportToExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    getSortedRoutes(filteredAndGroupedData).forEach(([routeId, data]) => {
+      const sheetData = data.map((req) => ({
+        "Student Name": req.studentName || "N/A",
+        USN: req.usn || "N/A",
+        "Profile Type": req.profileType || "Student",
+        Route: routeId,
+        "Pickup Point": req.pickupPoint || "N/A",
+        Status: req.status || "pending",
+        "Request Date": formatExportDate(req),
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(sheetData);
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        routeId.replace("route-", "R")
+      );
+    });
+    XLSX.writeFile(workbook, `BusPassRequests_${filterType.toUpperCase()}.xlsx`);
+  };
+
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text("Bus Pass Requests - Route-wise Report", 14, 15);
-
+    doc.text(`Bus Pass Report - ${filterType.toUpperCase()}`, 14, 15);
     let yOffset = 30;
 
-    Object.keys(routeData).forEach((routeId) => {
+    getSortedRoutes(filteredAndGroupedData).forEach(([routeId, data]) => {
       doc.setFontSize(14);
-      doc.text(routeId.toUpperCase(), 14, yOffset);
-
-      const data = routeData[routeId].map((req) => [
-        req.studentName,
-        req.usn,
-        req.pickupPoint,
-        req.status,
-        req.requestDate
-          ? new Date(req.requestDate.seconds * 1000).toLocaleString()
-          : "N/A",
+      doc.text(`ROUTE: ${routeId.toUpperCase()}`, 14, yOffset);
+      const tableData = data.map((req) => [
+        req.studentName || "N/A",
+        req.usn || "N/A",
+        req.profileType || "Student",
+        req.pickupPoint || "N/A",
+        req.status || "pending",
+        formatExportDate(req),
       ]);
 
-      doc.autoTable({
-        startY: yOffset + 5,
-        head: [["Student Name", "USN", "Pickup Point", "Status", "Request Date"]],
-        body: data,
-      });
+      autoTable(doc, {
+  startY: yOffset + 5,
+  head: [["Name", "USN", "Profile", "Pickup Point", "Status", "Request Date"]],
+  body: tableData,
+  theme: "striped",
+  headStyles: { fillColor: [30, 41, 59] },
+});
 
       yOffset = doc.lastAutoTable.finalY + 15;
+      if (yOffset > 280) {
+        doc.addPage();
+        yOffset = 20;
+      }
     });
-
-    doc.save("BusPassRequests.pdf");
+    doc.save(`BusPassRequests_${filterType.toUpperCase()}.pdf`);
   };
 
-  if (loading) return <p>Loading route data...</p>;
+  if (loading) return <p style={{ textAlign: "center", padding: "20px" }}>Loading all data... ⏳</p>;
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>📊 All Bus Pass Requests (By Route)</h2>
+      <h2 style={{ marginBottom: "20px", textAlign: "center" }}>
+        📊 Comprehensive Bus Pass Data
+      </h2>
 
-      <div style={{ marginBottom: "20px" }}>
-        <button onClick={exportToExcel} style={{ marginRight: "10px" }}>
-          📑 Export to Excel
-        </button>
-        <button onClick={exportToPDF}>📄 Export to PDF</button>
+      {/* Filter + Export Controls */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+        <div>
+          <label className="fw-bold me-2">
+            <Filter size={16} className="me-1" /> Filter:
+          </label>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #ccc" }}
+          >
+            <option value="all">All</option>
+            <option value="student">Students</option>
+            <option value="teacher">Teachers</option>
+          </select>
+        </div>
+
+        <div>
+          <button
+            onClick={exportToExcel}
+            style={{
+              padding: "6px 12px",
+              marginRight: "10px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#107c10",
+              color: "#fff",
+              cursor: "pointer",
+            }}
+          >
+            <FileSpreadsheet size={16} className="me-1" /> Excel
+          </button>
+          <button
+            onClick={exportToPDF}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#b30000",
+              color: "#fff",
+              cursor: "pointer",
+            }}
+          >
+            <FileText size={16} className="me-1" /> PDF
+          </button>
+        </div>
       </div>
 
-      {Object.keys(routeData).length === 0 ? (
-        <p>No route data found.</p>
+      {/* Summary */}
+      <p style={{ textAlign: "center", marginBottom: "20px", fontWeight: "bold" }}>
+        Showing {Object.values(filteredAndGroupedData).flat().length} requests across{" "}
+        {Object.keys(filteredAndGroupedData).length} routes ({filterType.toUpperCase()}).
+      </p>
+
+      {/* Data Tables */}
+      {Object.keys(filteredAndGroupedData).length === 0 ? (
+        <p style={{ textAlign: "center" }}>No requests match the current filter.</p>
       ) : (
-        Object.keys(routeData).map((routeId) => (
-          <div key={routeId} style={{ marginBottom: "40px" }}>
-            <h3>{routeId.toUpperCase()}</h3>
-            {routeData[routeId].length === 0 ? (
-              <p>No requests for this route.</p>
-            ) : (
-              <table border="1" cellPadding="8" style={{ width: "100%" }}>
-                <thead>
-                  <tr>
-                    <th>Student Name</th>
-                    <th>USN</th>
-                    <th>Pickup Point</th>
-                    <th>Status</th>
-                    <th>Request Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {routeData[routeId].map((req) => (
-                    <tr key={req.id}>
-                      <td>{req.studentName}</td>
-                      <td>{req.usn}</td>
-                      <td>{req.pickupPoint}</td>
-                      <td>{req.status}</td>
-                      <td>
-                        {req.requestDate
-                          ? new Date(req.requestDate.seconds * 1000).toLocaleString()
-                          : "N/A"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+        getSortedRoutes(filteredAndGroupedData).map(([routeId, data]) => (
+          <div key={routeId} style={{ marginBottom: "30px" }}>
+            <h3 style={{ margin: "10px 0", color: "#2563eb" }}>
+              ROUTE: {routeId.toUpperCase()} ({data.length})
+            </h3>
+            <table
+  style={{
+    width: "100%",
+    borderCollapse: "collapse",
+    background: "#fff",
+    borderRadius: "10px",
+    overflow: "hidden",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    tableLayout: "fixed",   // ✅ Ensures equal widths
+  }}
+>
+  <thead style={{ background: "#f3f3f3" }}>
+    <tr>
+      <th style={{ width: "16.6%", padding: "12px", border: "1px solid #ddd" }}>Name</th>
+      <th style={{ width: "16.6%", padding: "12px", border: "1px solid #ddd" }}>USN</th>
+      <th style={{ width: "16.6%", padding: "12px", border: "1px solid #ddd" }}>Profile</th>
+      <th style={{ width: "16.6%", padding: "12px", border: "1px solid #ddd" }}>Pickup Point</th>
+      <th style={{ width: "16.6%", padding: "12px", border: "1px solid #ddd" }}>Status</th>
+      <th style={{ width: "16.6%", padding: "12px", border: "1px solid #ddd" }}>Request Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {data.map((req) => (
+      <tr key={req.id}>
+        <td style={{ padding: "10px", border: "1px solid #ddd", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {req.studentName || "N/A"}
+        </td>
+        <td style={{ padding: "10px", border: "1px solid #ddd", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {req.usn || "N/A"}
+        </td>
+        <td style={{ padding: "10px", border: "1px solid #ddd" }}>{req.profileType || "Student"}</td>
+        <td style={{ padding: "10px", border: "1px solid #ddd", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {req.pickupPoint || "N/A"}
+        </td>
+        <td
+          style={{
+            padding: "10px",
+            border: "1px solid #ddd",
+            fontWeight: "bold",
+            color:
+              req.status === "approved"
+                ? "green"
+                : req.status === "pending"
+                ? "orange"
+                : "red",
+          }}
+        >
+          {(req.status || "pending").toUpperCase()}
+        </td>
+        <td style={{ padding: "10px", border: "1px solid #ddd" }}>{formatReqDate(req)}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
           </div>
         ))
       )}

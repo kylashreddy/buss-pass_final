@@ -61,34 +61,47 @@ function App() {
           }
 
           // Only check passes for students
-          if (userDocSnap.exists() && userDocSnap.data().role === "student") {
-            const q = query(
-              collection(db, "busPassRequests"),
-              where("studentId", "==", currentUser.uid),
-              where("status", "==", "approved")
-            );
-            const querySnapshot = await getDocs(q);
+        // Only check approved passes for students across route collections
+if (userDocSnap.exists() && userDocSnap.data().role === "student") {
+  const routeCollections = [
+    "route-1","route-2","route-3","route-4","route-5","route-6",
+    "route-7","route-8","route-9","route-10","route-11","route-12"
+  ];
 
-            const toDate = (v) => {
-              if (!v) return null;
-              if (typeof v.toDate === 'function') return v.toDate();
-              return v instanceof Date ? v : null;
-            };
+  const toDate = (v) => {
+    if (!v) return null;
+    if (typeof v.toDate === "function") return v.toDate();
+    return v instanceof Date ? v : null;
+  };
 
-            let isAnyValid = false;
-            const now = new Date();
-            querySnapshot.forEach((docSnap) => {
-              const d = docSnap.data();
-              const approvedAt = toDate(d.approvedAt) || toDate(d.requestDate);
-              const validUntil = toDate(d.validUntil) || (approvedAt ? new Date(approvedAt.getTime() + 365 * 24 * 60 * 60 * 1000) : null);
-              if (validUntil && validUntil > now) {
-                isAnyValid = true;
-              }
-            });
-            setHasApprovedPass(isAnyValid);
-          } else {
-            setHasApprovedPass(false);
-          }
+  let isAnyValid = false;
+  const now = new Date();
+
+  for (const routeCol of routeCollections) {
+    const q = query(
+      collection(db, routeCol),
+      where("studentId", "==", currentUser.uid),
+      where("status", "==", "approved")
+    );
+    const querySnapshot = await getDocs(q);
+
+    querySnapshot.forEach((docSnap) => {
+      const d = docSnap.data();
+      const approvedAt = toDate(d.approvedAt) || toDate(d.requestDate);
+      const validUntil = toDate(d.validUntil) || (approvedAt ? new Date(approvedAt.getTime() + 365*24*60*60*1000) : null);
+      if (validUntil && validUntil > now) {
+        isAnyValid = true;
+      }
+    });
+
+    if (isAnyValid) break; // stop once we find one valid pass
+  }
+
+  setHasApprovedPass(isAnyValid);
+} else {
+  setHasApprovedPass(false);
+}
+
         } catch (err) {
           console.error("Error fetching user doc:", err);
           setUserRole(null);
