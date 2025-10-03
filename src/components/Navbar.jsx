@@ -38,9 +38,6 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
   const adminLinks = (
     <>
       <li>
-        <Link to="/home" style={navLinkStyle}>Home</Link>
-      </li>
-      <li>
         <Link to="/admin/requests" style={{ ...navLinkStyle, color: "#18193F", background: "#FFD700" }}>Requests</Link>
       </li>
       <li>

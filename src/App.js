@@ -212,15 +212,6 @@ function App() {
               <Route path="/" element={<Navigate to="/admin/requests" replace />} />
               <Route path="/admin" element={<Navigate to="/admin/requests" replace />} />
 
-              {/* Home info page */}
-              <Route
-                path="/home"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <Home />
-                  </motion.div>
-                }
-              />
 
               {/* Requests page */}
               <Route
