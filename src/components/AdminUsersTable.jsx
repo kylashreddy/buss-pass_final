@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
 
 function AdminUsersTable({ roleFilter = "student" }) {
   const [users, setUsers] = useState([]);
@@ -51,6 +51,35 @@ function AdminUsersTable({ roleFilter = "student" }) {
 
   const label = roleFilter === 'teacher' ? 'Teachers' : roleFilter === 'student' ? 'Students' : 'Users';
 
+  const onEdit = async (u) => {
+    try {
+      const name = prompt('Name', u.name || '');
+      if (name === null) return;
+      const usn = prompt('USN', u.usn || '');
+      if (usn === null) return;
+      const email = prompt('Email', u.email || '');
+      if (email === null) return;
+      const role = prompt('Role (student/teacher/admin)', u.role || 'student');
+      if (role === null) return;
+      await updateDoc(doc(db, 'users', u.id), { name, usn, email, role });
+      alert('✅ User updated');
+    } catch (err) {
+      console.error('Update failed:', err);
+      alert('Failed to update: ' + err.message);
+    }
+  };
+
+  const onDelete = async (u) => {
+    try {
+      if (!window.confirm(`Delete user ${u.name || u.email || u.id}? This removes the Firestore user document.`)) return;
+      await deleteDoc(doc(db, 'users', u.id));
+      alert('🗑️ User deleted (Firestore doc). Note: Auth account, if any, is not removed.');
+    } catch (err) {
+      console.error('Delete failed:', err);
+      alert('Failed to delete: ' + err.message);
+    }
+  };
+
   return (
     <div style={{ padding: 20 }}>
       <h2 style={{ textAlign: 'center', marginBottom: 6 }}>👥 {label}</h2>
@@ -68,6 +97,7 @@ function AdminUsersTable({ roleFilter = "student" }) {
                 <th style={th}>Email</th>
                 <th style={th}>Role</th>
                 <th style={th}>Created</th>
+                <th style={th}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -78,6 +108,10 @@ function AdminUsersTable({ roleFilter = "student" }) {
                   <td style={td}>{u.email || '—'}</td>
                   <td style={td}>{u.role || '—'}</td>
                   <td style={td}>{u.createdAt && typeof u.createdAt.toDate === 'function' ? u.createdAt.toDate().toLocaleString() : '—'}</td>
+                  <td style={td}>
+                    <button onClick={() => onEdit(u)} style={smallBtn('blue')}>Edit</button>
+                    <button onClick={() => onDelete(u)} style={smallBtn('red')}>Delete</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -90,5 +124,14 @@ function AdminUsersTable({ roleFilter = "student" }) {
 
 const th = { padding: '10px', border: '1px solid #ddd', textAlign: 'left' };
 const td = { padding: '10px', border: '1px solid #ddd' };
+const smallBtn = (color) => ({
+  padding: '6px 10px',
+  marginRight: 6,
+  border: 'none',
+  borderRadius: 6,
+  color: '#fff',
+  background: color === 'red' ? '#dc2626' : '#2563eb',
+  cursor: 'pointer'
+});
 
 export default AdminUsersTable;
