@@ -90,8 +90,12 @@ function BusPassRequestForm() {
       return;
     }
 
-    if (!routeName || !pickupPoint || !year) {
-      setError("Please fill in all required fields (Route, Pickup, Year).");
+    const requireYear = profileType !== 'teacher';
+    if (!routeName || !pickupPoint || (requireYear && !year)) {
+      setError(requireYear
+        ? "Please fill in all required fields (Route, Pickup, Year)."
+        : "Please fill in all required fields (Route, Pickup)."
+      );
       return;
     }
 
@@ -102,7 +106,7 @@ function BusPassRequestForm() {
         studentName: currentUserData.name,
         routeName,
         pickupPoint: pickupPoint,
-        year,
+        year: profileType !== 'teacher' ? year : null,
         profileType,
         notes: notes || null,
         requestDate: new Date(),
@@ -215,20 +219,22 @@ function BusPassRequestForm() {
               <div className="help-text">This enables stop‑wise scheduling</div>
             </div>
 
-            {/* Year Dropdown */}
-            <div className="field">
-              <div className="label-row">
-                <span className="icon-badge-sm icon-epass"><GraduationCap size={16} /></span>
-                <label htmlFor="year">Year</label>
+            {/* Year Dropdown (students only) */}
+            {profileType !== 'teacher' && (
+              <div className="field">
+                <div className="label-row">
+                  <span className="icon-badge-sm icon-epass"><GraduationCap size={16} /></span>
+                  <label htmlFor="year">Year</label>
+                </div>
+                <select id="year" value={year} onChange={(e) => setYear(e.target.value)} required>
+                  <option value="">-- Select Year --</option>
+                  <option value="1st">1st Year</option>
+                  <option value="2nd">2nd Year</option>
+                  <option value="3rd">3rd Year</option>
+                  <option value="4th">4th Year</option>
+                </select>
               </div>
-              <select id="year" value={year} onChange={(e) => setYear(e.target.value)} required>
-                <option value="">-- Select Year --</option>
-                <option value="1st">1st Year</option>
-                <option value="2nd">2nd Year</option>
-                <option value="3rd">3rd Year</option>
-                <option value="4th">4th Year</option>
-              </select>
-            </div>
+            )}
 
             {/* Profile Type */}
             <div className="field">
@@ -236,7 +242,11 @@ function BusPassRequestForm() {
                 <span className="icon-badge-sm icon-epass"><GraduationCap size={16} /></span>
                 <label htmlFor="profileType">Profile Type</label>
               </div>
-              <select id="profileType" value={profileType} onChange={(e) => setProfileType(e.target.value)} required>
+              <select id="profileType" value={profileType} onChange={(e) => {
+                const v = e.target.value;
+                setProfileType(v);
+                if (v === 'teacher') setYear('');
+              }} required>
                 <option value="student">Student</option>
                 <option value="teacher">Teacher</option>
               </select>
