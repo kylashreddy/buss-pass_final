@@ -80,54 +80,58 @@ function BusPassRequestForm() {
     fetchUserData();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmissionStatus(null);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setSubmissionStatus(null);
+  setError(null);
+
+  if (!auth.currentUser || !currentUserData) {
+    setError("User not authenticated or data not loaded.");
+    return;
+  }
+
+  const requireYear = profileType !== 'teacher';
+  if (!routeName || !pickupPoint || (requireYear && !year)) {
+    setError(requireYear
+      ? "Please fill in all required fields (Route, Pickup, Year)."
+      : "Please fill in all required fields (Route, Pickup)."
+    );
+    return;
+  }
+
+  try {
+    // 👇 convert "Route 1" → "route-1"
+    const routeCollection = routeName.toLowerCase().replace(/\s+/g, "-");
+
+    await addDoc(collection(db, routeCollection), {
+      studentId: auth.currentUser.uid,
+      usn: currentUserData.usn,
+      studentName: currentUserData.name,
+      routeName,
+      pickupPoint,
+      year: profileType !== 'teacher' ? year : null,
+      profileType,
+      notes: notes || null,
+      requestDate: new Date(),
+      status: "pending",
+    });
+
+    setSubmissionStatus("success");
+    setRouteName("");
+    setPickupPoint("");
+    setYear("");
+    setProfileType("student");
+    setNotes("");
     setError(null);
 
-    if (!auth.currentUser || !currentUserData) {
-      setError("User not authenticated or data not loaded.");
-      return;
-    }
+    setTimeout(() => setSubmissionStatus(null), 5000);
 
-    const requireYear = profileType !== 'teacher';
-    if (!routeName || !pickupPoint || (requireYear && !year)) {
-      setError(requireYear
-        ? "Please fill in all required fields (Route, Pickup, Year)."
-        : "Please fill in all required fields (Route, Pickup)."
-      );
-      return;
-    }
+  } catch (err) {
+    setError("Failed to submit request: " + err.message);
+    setSubmissionStatus("error");
+  }
+};
 
-    try {
-      await addDoc(collection(db, "busPassRequests"), {
-        studentId: auth.currentUser.uid,
-        usn: currentUserData.usn,
-        studentName: currentUserData.name,
-        routeName,
-        pickupPoint: pickupPoint,
-        year: profileType !== 'teacher' ? year : null,
-        profileType,
-        notes: notes || null,
-        requestDate: new Date(),
-        status: "pending",
-      });
-
-      setSubmissionStatus('success');
-      setRouteName('');
-      setPickupPoint('');
-      setYear('');
-      setProfileType('student');
-      setNotes('');
-      setError(null);
-
-      setTimeout(() => setSubmissionStatus(null), 5000);
-
-    } catch (err) {
-      setError("Failed to submit request: " + err.message);
-      setSubmissionStatus('error');
-    }
-  };
 
   if (loadingUserData) {
     return <div>Loading user information...</div>;

@@ -52,6 +52,9 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
       <li>
         <Link to="/admin/complaints" style={navLinkStyle}>Complaints</Link>
       </li>
+      <li>
+        <Link to="/admin/all-data" style={navLinkStyle}>See All Data</Link>
+      </li>
     </>
   );
 

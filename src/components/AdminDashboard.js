@@ -8,23 +8,33 @@ function AdminDashboard({ filterProfileType = "all" }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch only pending bus pass requests (optionally filtered by profile type)
   useEffect(() => {
-    try {
+    const routeCollections = [
+      "route-1","route-2","route-3","route-4","route-5","route-6",
+      "route-7","route-8","route-9","route-10","route-11","route-12"
+    ];
+
+    const unsubscribes = [];
+
+    routeCollections.forEach((routeCol) => {
       const conditions = [where("status", "==", "pending")];
       if (filterProfileType && filterProfileType !== "all") {
         conditions.push(where("profileType", "==", filterProfileType));
       }
-      const q = query(collection(db, "busPassRequests"), ...conditions);
+      const q = query(collection(db, routeCol), ...conditions);
 
       const unsubscribe = onSnapshot(
         q,
         (querySnapshot) => {
           const requests = [];
-          querySnapshot.forEach((document) => {
-            requests.push({ id: document.id, ...document.data() });
+          querySnapshot.forEach((docSnap) => {
+            requests.push({ id: docSnap.id, routeCol, ...docSnap.data() });
           });
-          setPendingRequests(requests);
+
+          setPendingRequests((prev) => {
+            const filteredPrev = prev.filter((r) => r.routeCol !== routeCol);
+            return [...filteredPrev, ...requests];
+          });
           setLoading(false);
         },
         (err) => {
@@ -34,42 +44,42 @@ function AdminDashboard({ filterProfileType = "all" }) {
         }
       );
 
-      return () => unsubscribe();
-    } catch (err) {
-      console.error("Error preparing query:", err);
-      setError("Failed to prepare request query: " + err.message);
-      setLoading(false);
-    }
+      unsubscribes.push(unsubscribe);
+    });
+
+    return () => unsubscribes.forEach((unsub) => unsub());
   }, [filterProfileType]);
 
-  const handleApprove = async (requestId) => {
+  const handleApprove = async (requestId, routeCollection) => {
     try {
-      const requestRef = doc(db, "busPassRequests", requestId);
+      const requestRef = doc(db, routeCollection, requestId);
       await updateDoc(requestRef, {
         status: "approved",
         adminId: auth.currentUser.uid,
-        approvalDate: new Date(),
+        approvedAt: new Date(),
       });
       alert("✅ Request approved!");
+      setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
     } catch (err) {
-      console.error("Error approving:", err);
+      console.error(err);
       setError("Failed to approve: " + err.message);
     }
   };
 
-  const handleReject = async (requestId) => {
+  const handleReject = async (requestId, routeCollection) => {
     const reason = prompt("Enter reason for rejection (optional):");
     try {
-      const requestRef = doc(db, "busPassRequests", requestId);
+      const requestRef = doc(db, routeCollection, requestId);
       await updateDoc(requestRef, {
         status: "rejected",
         adminId: auth.currentUser.uid,
-        approvalDate: new Date(),
+        approvedAt: new Date(),
         rejectionReason: reason || "No reason provided",
       });
       alert("❌ Request rejected!");
+      setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
     } catch (err) {
-      console.error("Error rejecting:", err);
+      console.error(err);
       setError("Failed to reject: " + err.message);
     }
   };
@@ -124,13 +134,13 @@ function AdminDashboard({ filterProfileType = "all" }) {
                   </td>
                   <td style={tdStyle}>
                     <button
-                      onClick={() => handleApprove(req.id)}
+                      onClick={() => handleApprove(req.id, req.routeCol)} 
                       style={approveBtn}
                     >
                       ✅ Approve
                     </button>
                     <button
-                      onClick={() => handleReject(req.id)}
+                      onClick={() => handleReject(req.id, req.routeCol)}  
                       style={rejectBtn}
                     >
                       ❌ Reject

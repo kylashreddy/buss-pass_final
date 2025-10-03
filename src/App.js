@@ -21,6 +21,10 @@ import Navbar from "./components/Navbar";
 import ContactUs from "./components/ContactUs";
 import AdminUsersTable from './components/AdminUsersTable';
 import AdminLoginLogs from './components/AdminLoginLogs';
+import AllData from './components/AllData'; // ✅ Correct
+
+
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -152,6 +156,7 @@ function App() {
                   </motion.div>
                 }
               />
+             
 
               <Route
                 path="/tracking"
@@ -264,16 +269,22 @@ function App() {
                   </motion.div>
                 }
               />
+              {/* All Data page */}
+<Route
+  path="/admin/all-data"
+  element={
+    <motion.div
+      className="page-content"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+    >
+      <AllData />
+    </motion.div>
+  }
+/>
 
-              {/* Catch all */}
-              <Route
-                path="*"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <h2>404 - Page Not Found</h2>
-                  </motion.div>
-                }
-              />
+             
             </Routes>
           )}
 
