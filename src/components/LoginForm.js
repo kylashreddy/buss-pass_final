@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { motion } from 'framer-motion';
+import { logLoginEvent } from "../utils/logLoginEvent";
 
 function LoginForm({ onSwitchToRegister }) {
   const [email, setEmail] = useState("");
@@ -31,30 +32,18 @@ function LoginForm({ onSwitchToRegister }) {
         role = profile.role;
       }
 
-      // Log successful login (guard against duplicate logs in same session)
-      const sessionKey = `loginLogged:${user.uid}`;
-      if (!sessionStorage.getItem(sessionKey)) {
-        try {
-          await addDoc(collection(db, "loginLogs"), {
-            userId: user.uid,
-            email: (profile && profile.email) || user.email || null,
-            name: (profile && profile.name) || null,
-            usn: (profile && profile.usn) || null,
-            role: role || null,
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-            platform: typeof navigator !== 'undefined' ? navigator.platform : null,
-            timestamp: serverTimestamp(),
-          });
-          sessionStorage.setItem(sessionKey, "1");
-        } catch (logErr) {
-          console.warn("Failed to write login log:", logErr);
-        }
-      }
+      // Log successful login (guarded per session)
+      await logLoginEvent(db, user, profile);
 
+      // Route by role; allow teacher to sign in and land on Home
       if (role === "student") {
         navigate("/epass");
+      } else if (role === "teacher") {
+        navigate("/home");
+      } else if (role === "admin") {
+        navigate("/admin/requests");
       } else {
-        setError("Only student login is allowed.");
+        navigate("/home");
       }
 
       setEmail("");

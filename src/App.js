@@ -4,7 +4,8 @@ import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { logLoginEvent } from "./utils/logLoginEvent";
 import { motion } from 'framer-motion';
 import AnimatedCursor from './components/AnimatedCursor';
 import TrackingPlaceholder from './components/TrackingPlaceholder';
@@ -49,21 +50,8 @@ function App() {
 
           // Log login on session restore or external login (avoid duplicate if already logged via LoginForm)
           try {
-            const sessionKey = `loginLogged:${currentUser.uid}`;
-            if (!sessionStorage.getItem(sessionKey)) {
-              const profile = userDocSnap.exists() ? userDocSnap.data() : null;
-              await addDoc(collection(db, "loginLogs"), {
-                userId: currentUser.uid,
-                email: (profile && profile.email) || currentUser.email || null,
-                name: (profile && profile.name) || null,
-                usn: (profile && profile.usn) || null,
-                role: (profile && profile.role) || null,
-                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-                platform: typeof navigator !== 'undefined' ? navigator.platform : null,
-                timestamp: serverTimestamp(),
-              });
-              sessionStorage.setItem(sessionKey, "1");
-            }
+            const profile = userDocSnap.exists() ? userDocSnap.data() : null;
+            await logLoginEvent(db, currentUser, profile);
           } catch (logErr) {
             console.warn("Login log (App) failed:", logErr);
           }
@@ -295,6 +283,22 @@ function App() {
                   </motion.div>
                 }
               />
+            </Routes>
+          )}
+
+          {/* TEACHER ROUTES */}
+          {userRole === "teacher" && (
+            <Routes>
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route
+                path="/home"
+                element={
+                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                    <Home />
+                  </motion.div>
+                }
+              />
+              <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           )}
         </>

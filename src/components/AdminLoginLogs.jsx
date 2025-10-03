@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { collection, onSnapshot, query } from "firebase/firestore";
 
 function AdminLoginLogs() {
   const [logs, setLogs] = useState([]);
@@ -9,14 +9,13 @@ function AdminLoginLogs() {
 
   useEffect(() => {
     try {
-      // Show latest 200 logins (ordered by timestamp desc)
-      const q = query(collection(db, "loginLogs"), orderBy("timestamp", "desc"), limit(200));
+      // Listen to login logs, then sort locally by timestamp desc
+      const q = query(collection(db, "loginLogs"));
       const unsub = onSnapshot(
         q,
         (snap) => {
           const list = [];
           snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
-          // Local sort by timestamp desc
           list.sort((a, b) => {
             const toMs = (v) => (v && typeof v.toDate === 'function') ? v.toDate().getTime() : (v instanceof Date ? v.getTime() : 0);
             return toMs(b.timestamp) - toMs(a.timestamp);
