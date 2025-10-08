@@ -109,7 +109,7 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
           {/* Right-side notifications bell */}
           {user && (
             <div style={{ marginLeft: 6 }}>
-              <NotificationsBell user={user} />
+              <NotificationsBell user={user} userRole={userRole} />
             </div>
           )}
 

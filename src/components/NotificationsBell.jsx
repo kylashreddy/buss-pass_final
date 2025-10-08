@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { db } from "../firebase";
 import { collection, onSnapshot, query, where, orderBy, doc, updateDoc, deleteDoc, serverTimestamp, addDoc } from "firebase/firestore";
 
-function NotificationsBell({ user }) {
+function NotificationsBell({ user, userRole }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
 
@@ -48,6 +49,18 @@ function NotificationsBell({ user }) {
   };
 
   if (!user) return null;
+
+  // If the logged-in user is an admin, make the bell navigate to the admin
+  // notifications page instead of rendering the per-user dropdown.
+  if (userRole === "admin") {
+    return (
+      <div style={{ position: "relative" }}>
+        <Link to="/admin/notifications" className="btn-chip" aria-label="Admin notifications">
+          🔔 Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: "relative" }}>
