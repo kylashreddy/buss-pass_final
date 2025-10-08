@@ -28,10 +28,10 @@ body {
   100% { background-position: 12px 10px, -10px 6px, 0 0; }
 }
 
-/* Animated Cursor styles (only on fine pointers) */
+/* Ensure normal system cursor */
 @media (pointer: fine) {
   html, body {
-    cursor: none;
+    cursor: auto;
   }
 }
 

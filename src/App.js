@@ -7,7 +7,6 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { logLoginEvent } from "./utils/logLoginEvent";
 import { motion } from 'framer-motion';
-import AnimatedCursor from './components/AnimatedCursor';
 import TrackingPlaceholder from './components/TrackingPlaceholder';
 import Home from './components/Home';
 
@@ -19,9 +18,10 @@ import AdminComplaints from './components/AdminComplaints';
 import StudentBusPassView from './components/StudentBusPassView';
 import Navbar from "./components/Navbar";
 import ContactUs from "./components/ContactUs";
-import AdminUsersTable from './components/AdminUsersTable';
-import AdminLoginLogs from './components/AdminLoginLogs';
+import AdminUsersTable from './components/AdminUsersTableClean';
 import AllData from './components/AllData'; // ✅ Correct
+import AdminNotifications from './components/AdminNotifications';
+import UserNotifications from './components/UserNotifications';
 
 
 
@@ -142,7 +142,7 @@ if (userDocSnap.exists() && userDocSnap.data().role === "student") {
 
   return (
     <Router>
-      <AnimatedCursor />
+      {/* Animated cursor removed */}
       {/* Navbar always visible */}
       <Navbar user={user} userRole={userRole} handleLogout={handleLogout} hasApprovedPass={hasApprovedPass} />
 
@@ -198,6 +198,15 @@ if (userDocSnap.exists() && userDocSnap.data().role === "student") {
                 element={
                   <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
                     <ContactUs />
+                  </motion.div>
+                }
+              />
+
+              <Route
+                path="/notifications"
+                element={
+                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                    <UserNotifications user={user} />
                   </motion.div>
                 }
               />
@@ -263,22 +272,21 @@ if (userDocSnap.exists() && userDocSnap.data().role === "student") {
                 }
               />
 
-              {/* Login log */}
-              <Route
-                path="/admin/logins"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <AdminLoginLogs />
-                  </motion.div>
-                }
-              />
-
               {/* Complaints page */}
               <Route
                 path="/admin/complaints"
                 element={
                   <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
                     <AdminComplaints />
+                  </motion.div>
+                }
+              />
+              {/* Admin Notifications page */}
+              <Route
+                path="/admin/notifications"
+                element={
+                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                    <AdminNotifications />
                   </motion.div>
                 }
               />

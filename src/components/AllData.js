@@ -262,58 +262,38 @@ function AllData() {
 
               {/* ✅ Responsive wrapper */}
               <div style={{ overflowX: "auto" }}>
-                <table
-                  style={{
-                    width: "100%",
-                    minWidth: "600px", // ✅ prevents squish
-                    borderCollapse: "collapse",
-                    background: "#fff",
-                    borderRadius: "10px",
-                    overflow: "hidden",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  <thead style={{ background: "#f3f3f3" }}>
+                <table className="ui-table" style={{ minWidth: "900px" }}>
+                  <thead>
                     <tr>
-                      <th style={{ padding: "12px", border: "1px solid #ddd" }}>Name</th>
-                      <th style={{ padding: "12px", border: "1px solid #ddd" }}>USN</th>
-                      <th style={{ padding: "12px", border: "1px solid #ddd" }}>Profile</th>
-                      <th style={{ padding: "12px", border: "1px solid #ddd" }}>Pickup Point</th>
-                      <th style={{ padding: "12px", border: "1px solid #ddd" }}>Status</th>
-                      <th style={{ padding: "12px", border: "1px solid #ddd" }}>Request Date</th>
+                      <th className="col-name">Name</th>
+                      <th className="col-usn">USN</th>
+                      <th className="col-profile">Profile</th>
+                      <th className="col-pickup">Pickup Point</th>
+                      <th className="col-status">Status</th>
+                      <th className="col-date">Request Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.map((req) => (
                       <tr key={req.id}>
-                        <td style={{ padding: "10px", border: "1px solid #ddd", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                        <td className="col-name truncate">
                           {req.studentName || "N/A"}
                         </td>
-                        <td style={{ padding: "10px", border: "1px solid #ddd" }}>
+                        <td className="col-usn">
                           {req.usn || "N/A"}
                         </td>
-                        <td style={{ padding: "10px", border: "1px solid #ddd" }}>
+                        <td className="col-profile">
                           {req.profileType || "Student"}
                         </td>
-                        <td style={{ padding: "10px", border: "1px solid #ddd", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                        <td className="col-pickup truncate">
                           {req.pickupPoint || "N/A"}
                         </td>
-                        <td
-                          style={{
-                            padding: "10px",
-                            border: "1px solid #ddd",
-                            fontWeight: "bold",
-                            color:
-                              req.status === "approved"
-                                ? "green"
-                                : req.status === "pending"
-                                ? "orange"
-                                : "red",
-                          }}
-                        >
-                          {(req.status || "pending").toUpperCase()}
+                        <td className="col-status">
+                          <span className={`badge ${
+                            (req.status || 'pending')
+                          }`}>{(req.status || 'pending').toUpperCase()}</span>
                         </td>
-                        <td style={{ padding: "10px", border: "1px solid #ddd" }}>
+                        <td className="col-date">
                           {formatReqDate(req)}
                         </td>
                       </tr>

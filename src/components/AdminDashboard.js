@@ -114,11 +114,9 @@ function AdminDashboard({ filterProfileType = "all" }) {
                 ? "Teachers"
                 : "All Profiles";
 
-    // Reusable styles (moved outside component or defined here if not possible)
+    // Reusable styles
     const thStyle = { padding: "10px", border: "1px solid #ddd", textAlign: "left" };
     const tdStyle = { padding: "10px", border: "1px solid #ddd" };
-    const approveBtn = { padding: "6px 12px", background: "green", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", marginRight: "8px" };
-    const rejectBtn = { padding: "6px 12px", background: "red", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" };
 
 
     return (
@@ -129,17 +127,8 @@ function AdminDashboard({ filterProfileType = "all" }) {
                 <p>No pending requests 🎉</p>
             ) : (
                 <div style={{ overflowX: "auto" }}>
-                    <table
-                        style={{
-                            width: "100%",
-                            borderCollapse: "collapse",
-                            background: "#fff",
-                            borderRadius: "10px",
-                            overflow: "hidden",
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                        }}
-                    >
-                        <thead style={{ background: "#f3f3f3" }}>
+                    <table className="ui-table gray" style={{ minWidth: "1000px" }}>
+                        <thead>
                             <tr>
                                 <th style={thStyle}>Name</th>
                                 <th style={thStyle}>USN</th>
@@ -156,21 +145,15 @@ function AdminDashboard({ filterProfileType = "all" }) {
                                     <td style={tdStyle}>{req.usn}</td>
                                     <td style={tdStyle}>{req.routeName || req.routeCol}</td> {/* Use routeName or routeCol */}
                                     <td style={tdStyle}>{req.pickupPoint}</td>
-                                    <td style={{ ...tdStyle, color: "orange", fontWeight: "bold" }}>
-                                        {req.status}
+                                    <td style={tdStyle}>
+                                        <span className={`badge ${req.status || 'pending'}`}>{(req.status || 'pending').toUpperCase()}</span>
                                     </td>
                                     <td style={tdStyle}>
-                                        <button
-                                            onClick={() => handleApprove(req.id, req.routeCol)}
-                                            style={approveBtn}
-                                        >
-                                            ✅ Approve
+                                        <button className="btn-chip btn-approve" onClick={() => handleApprove(req.id, req.routeCol)}>
+                                            <span className="dot" /> Approve
                                         </button>
-                                        <button
-                                            onClick={() => handleReject(req.id, req.routeCol)}
-                                            style={rejectBtn}
-                                        >
-                                            ❌ Reject
+                                        <button className="btn-chip btn-reject" style={{ marginLeft: 8 }} onClick={() => handleReject(req.id, req.routeCol)}>
+                                            <span className="dot" /> Reject
                                         </button>
                                     </td>
                                 </tr>
@@ -183,11 +166,9 @@ function AdminDashboard({ filterProfileType = "all" }) {
     );
 }
 
-// Reusable styles (removed redundant definition in the main function)
+// Reusable styles (removed old inline button styles)
 const thStyle = { padding: "10px", border: "1px solid #ddd", textAlign: "left" };
 const tdStyle = { padding: "10px", border: "1px solid #ddd" };
-const approveBtn = { padding: "6px 12px", background: "green", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", marginRight: "8px" };
-const rejectBtn = { padding: "6px 12px", background: "red", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" };
 
 
 export default AdminDashboard;

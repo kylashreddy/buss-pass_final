@@ -2,17 +2,19 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { collection, onSnapshot, orderBy, query, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import EditDialog from './EditDialog';
 
 function AdminComplaints() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "complaints"), orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = [];
-      snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
+      snapshot.forEach((d) => data.push({ id: d.id, ...d.data() }));
       setComplaints(data);
       setLoading(false);
     });
@@ -28,53 +30,28 @@ function AdminComplaints() {
       {complaints.length === 0 ? (
         <p style={{ textAlign: "center" }}>No complaints yet 🎉</p>
       ) : (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            background: "#fff",
-            borderRadius: "10px",
-            overflow: "hidden",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          }}
-        >
-          <thead style={{ background: "#f3f3f3" }}>
+        <table className="ui-table" style={{ minWidth: "800px" }}>
+          <thead>
             <tr>
-              <th style={{ padding: "12px", border: "1px solid #ddd" }}>Name</th>
-              <th style={{ padding: "12px", border: "1px solid #ddd" }}>Email</th>
-              <th style={{ padding: "12px", border: "1px solid #ddd" }}>Message</th>
-              <th style={{ padding: "12px", border: "1px solid #ddd" }}>Date</th>
-              <th style={{ padding: "12px", border: "1px solid #ddd" }}>Actions</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Message</th>
+              <th>Date</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {complaints.map((c) => (
               <tr key={c.id}>
-                <td style={{ padding: "10px", border: "1px solid #ddd" }}>{c.name}</td>
-                <td style={{ padding: "10px", border: "1px solid #ddd" }}>{c.email}</td>
-                <td style={{ padding: "10px", border: "1px solid #ddd" }}>{c.message}</td>
-                <td style={{ padding: "10px", border: "1px solid #ddd" }}>
-                  {c.createdAt?.toDate
-                    ? c.createdAt.toDate().toLocaleString()
-                    : "—"}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #ddd" }}>
-                  <button
-                    onClick={async () => {
-                      const name = prompt('Name', c.name || ''); if (name === null) return;
-                      const email = prompt('Email', c.email || ''); if (email === null) return;
-                      const message = prompt('Message', c.message || ''); if (message === null) return;
-                      try {
-                        await updateDoc(doc(db, 'complaints', c.id), { name, email, message });
-                        alert('✅ Complaint updated');
-                      } catch (err) {
-                        console.error('Update complaint failed:', err);
-                        alert('Failed to update complaint: ' + err.message);
-                      }
-                    }}
-                    style={{ padding: '6px 10px', marginRight: 6, border: 'none', borderRadius: 6, background: '#2563eb', color: '#fff', cursor: 'pointer' }}
-                  >Edit</button>
-                  <button
+                <td>{c.name}</td>
+                <td className="truncate">{c.email}</td>
+                <td>{c.message}</td>
+                <td>{c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString() : '—'}</td>
+                <td>
+                  <button className="btn-chip btn-edit goo" onClick={() => setEditing(c)}>
+                    <span className="dot" /> Edit
+                  </button>
+                  <button className="btn-chip btn-delete" style={{ marginLeft: 8 }}
                     onClick={async () => {
                       if (!window.confirm('Delete this complaint?')) return;
                       try {
@@ -85,14 +62,39 @@ function AdminComplaints() {
                         alert('Failed to delete complaint: ' + err.message);
                       }
                     }}
-                    style={{ padding: '6px 10px', border: 'none', borderRadius: 6, background: '#dc2626', color: '#fff', cursor: 'pointer' }}
-                  >Delete</button>
+                  >
+                    <span className="dot" /> Delete
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <EditDialog
+        open={!!editing}
+        title={editing ? `Edit complaint by ${editing.name || editing.email}` : ''}
+        fields={[
+          { name: 'name', label: 'Name', value: editing?.name || '' },
+          { name: 'email', label: 'Email', value: editing?.email || '' },
+          { name: 'message', label: 'Message', type: 'textarea', value: editing?.message || '' },
+        ]}
+        onChange={(k, v) => setEditing(prev => ({ ...prev, [k]: v }))}
+        onClose={() => setEditing(null)}
+        onSave={async () => {
+          try {
+            if (!editing) return;
+            const { id, name, email, message } = editing;
+            await updateDoc(doc(db, 'complaints', id), { name, email, message });
+            alert('\u2705 Complaint updated');
+            setEditing(null);
+          } catch (err) {
+            console.error('Update complaint failed:', err);
+            alert('Failed to update complaint: ' + err.message);
+          }
+        }}
+      />
     </div>
   );
 }

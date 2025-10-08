@@ -32,6 +32,9 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
       <li>
         <Link to="/contact" style={navLinkStyle}>Contact</Link>
       </li>
+          <li>
+            <Link to="/notifications" style={navLinkStyle}>Notifications</Link>
+          </li>
     </>
   );
 
@@ -47,14 +50,14 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
         <Link to="/admin/users/teachers" style={navLinkStyle}>Teachers</Link>
       </li>
       <li>
-        <Link to="/admin/logins" style={navLinkStyle}>Login Log</Link>
-      </li>
-      <li>
         <Link to="/admin/complaints" style={navLinkStyle}>Complaints</Link>
       </li>
       <li>
         <Link to="/admin/all-data" style={navLinkStyle}>See All Data</Link>
       </li>
+          <li>
+            <Link to="/admin/notifications" style={navLinkStyle}>Notifications</Link>
+          </li>
     </>
   );
 
