@@ -36,11 +36,11 @@ function ContactUs() {
   };
 
   return (
-    <div className="container py-4">
-      <div className="row g-4">
+    <div className="contact-page container py-4">
+      <div className="contact-container">
         {/* Left Info Section */}
         <motion.div
-          className="col-12 col-md-5 bg-light p-4 rounded shadow-sm"
+          className="contact-info"
           initial={{ opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.35 }}
@@ -63,7 +63,7 @@ function ContactUs() {
 
         {/* Right Form Section */}
         <motion.div
-          className="col-12 col-md-7 bg-white p-4 rounded shadow-sm"
+          className="contact-form"
           initial={{ opacity: 0, x: 8 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.35, delay: 0.05 }}
