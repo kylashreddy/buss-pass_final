@@ -82,12 +82,7 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
           </span>
         </div>
 
-        {/* Left-side notifications bell (next to logo) */}
-        {user && (
-          <div style={{ marginLeft: 12 }}>
-            <NotificationsBell user={user} />
-          </div>
-        )}
+        {/* (NotificationsBell moved to right side) */}
 
         {/* Desktop center links */}
         {!isMobile && (
@@ -102,13 +97,20 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
         )}
 
         {/* Right: Social + Mobile Menu Button */}
-        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {!isMobile && (
             <>
               <span style={iconStyle} title="Twitter"><i className="fab fa-twitter"></i></span>
               <span style={iconStyle} title="Facebook"><i className="fab fa-facebook-f"></i></span>
               <span style={iconStyle} title="Instagram"><i className="fab fa-instagram"></i></span>
             </>
+          )}
+
+          {/* Right-side notifications bell */}
+          {user && (
+            <div style={{ marginLeft: 6 }}>
+              <NotificationsBell user={user} />
+            </div>
           )}
 
           {isMobile && (
