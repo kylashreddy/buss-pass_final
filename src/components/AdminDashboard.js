@@ -1,7 +1,6 @@
 // src/components/AdminDashboard.js
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
-import AdminNotifications from "./AdminNotifications";
 // Ensure all necessary Firestore functions are imported
 import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore"; 
 
@@ -122,8 +121,6 @@ function AdminDashboard({ filterProfileType = "all" }) {
 
     return (
         <div style={{ padding: "20px" }}>
-            {/* Admin notifications send UI (same interface used elsewhere) */}
-            <AdminNotifications />
             <h2 style={{ marginBottom: "6px", textAlign: "center" }}>📋 Pending Bus Pass Requests</h2>
             <p style={{ marginTop: 0, textAlign: "center", color: "#6b7280" }}>Filter: {label}</p>
             {pendingRequests.length === 0 ? (
