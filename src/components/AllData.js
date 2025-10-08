@@ -248,62 +248,53 @@ function AllData() {
           No requests match the current filter.
         </p>
       ) : (
-        getSortedRoutes(filteredAndGroupedData).map(([routeId, data]) => {
-          const cleanRouteName =
-            routeId === "busPassRequests"
-              ? "GENERAL"
-              : `ROUTE ${routeId.replace("route-", "")}`;
+        <>
+          {getSortedRoutes(filteredAndGroupedData).map(([routeId, data]) => {
+            const cleanRouteName =
+              routeId === "busPassRequests"
+                ? "GENERAL"
+                : `ROUTE ${routeId.replace("route-", "")}`;
 
-          return (
-            <div key={routeId} style={{ marginBottom: "30px" }}>
-              <h3 style={{ margin: "10px 0", color: "#2563eb" }}>
-                {cleanRouteName} ({data.length})
-              </h3>
+            return (
+              <div key={routeId} style={{ marginBottom: "30px" }}>
+                <h3 style={{ margin: "10px 0", color: "#2563eb" }}>
+                  {cleanRouteName} ({data.length})
+                </h3>
 
-              {/* ✅ Responsive wrapper */}
-              <div style={{ overflowX: "auto" }}>
-                <table className="ui-table" style={{ minWidth: "900px" }}>
-                  <thead>
-                    <tr>
-                      <th className="col-name">Name</th>
-                      <th className="col-usn">USN</th>
-                      <th className="col-profile">Profile</th>
-                      <th className="col-pickup">Pickup Point</th>
-                      <th className="col-status">Status</th>
-                      <th className="col-date">Request Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.map((req) => (
-                      <tr key={req.id}>
-                        <td className="col-name truncate">
-                          {req.studentName || "N/A"}
-                        </td>
-                        <td className="col-usn">
-                          {req.usn || "N/A"}
-                        </td>
-                        <td className="col-profile">
-                          {req.profileType || "Student"}
-                        </td>
-                        <td className="col-pickup truncate">
-                          {req.pickupPoint || "N/A"}
-                        </td>
-                        <td className="col-status">
-                          <span className={`badge ${
-                            (req.status || 'pending')
-                          }`}>{(req.status || 'pending').toUpperCase()}</span>
-                        </td>
-                        <td className="col-date">
-                          {formatReqDate(req)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div style={{ overflowX: "auto" }}>
+                  <div className="table-wrapper">
+                    <table className="ui-table" style={{ minWidth: "860px" }}>
+                      <thead>
+                        <tr>
+                          <th className="col-name">Name</th>
+                          <th className="col-usn">USN</th>
+                          <th className="col-profile">Profile</th>
+                          <th className="col-pickup">Pickup Point</th>
+                          <th className="col-status">Status</th>
+                          <th className="col-date">Request Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.map((req) => (
+                          <tr key={req.id}>
+                            <td className="col-name truncate">{req.studentName || "N/A"}</td>
+                            <td className="col-usn">{req.usn || "N/A"}</td>
+                            <td className="col-profile">{req.profileType || "Student"}</td>
+                            <td className="col-pickup truncate">{req.pickupPoint || "N/A"}</td>
+                            <td className="col-status">
+                              <span className={`badge ${req.status || 'pending'}`}>{(req.status || 'pending').toUpperCase()}</span>
+                            </td>
+                            <td className="col-date">{formatReqDate(req)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })
+            );
+          })}
+        </>
       )}
     </div>
   );
