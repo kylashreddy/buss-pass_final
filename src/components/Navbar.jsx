@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import NotificationsBell from './NotificationsBell';
 
 function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
   const [isMobile, setIsMobile] = useState(false);
@@ -32,9 +33,6 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
       <li>
         <Link to="/contact" style={navLinkStyle}>Contact</Link>
       </li>
-          <li>
-            <Link to="/notifications" style={navLinkStyle}>Notifications</Link>
-          </li>
     </>
   );
 
@@ -55,9 +53,6 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
       <li>
         <Link to="/admin/all-data" style={navLinkStyle}>See All Data</Link>
       </li>
-          <li>
-            <Link to="/admin/notifications" style={navLinkStyle}>Notifications</Link>
-          </li>
     </>
   );
 
@@ -82,15 +77,22 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
             alt="CampusBus Logo"
             style={{ height: "32px", marginRight: "10px", borderRadius: "4px", background: "#fff", padding: "2px" }}
           />
-          <span style={{ fontWeight: "bold", fontSize: 18, color: "#fff", letterSpacing: 1 }}>
+          <span style={{ fontWeight: "bold", fontSize: 18, color: "#fff", letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
             {userRole === "admin" ? "CampusBus Admin" : "CampusBus"}
           </span>
         </div>
 
+        {/* Left-side notifications bell (next to logo) */}
+        {user && (
+          <div style={{ marginLeft: 12 }}>
+            <NotificationsBell user={user} />
+          </div>
+        )}
+
         {/* Desktop center links */}
         {!isMobile && (
           <ul style={linksRowStyle}>
-            {user ? (userRole === "admin" ? adminLinks : studentLinks) : guestLinks}
+              {user ? (userRole === "admin" ? adminLinks : studentLinks) : guestLinks}
             {user && (
               <li>
                 <button onClick={handleLogout} style={logoutButtonStyle}>Logout</button>
