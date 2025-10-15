@@ -172,6 +172,11 @@ const innerStyle = {
   justifyContent: "space-between",
   margin: "0 auto",
   padding: "6px 10px",
+  
+  // Mobile adjustments
+  '@media (max-width: 768px)': {
+    padding: "6px 8px",
+  }
 };
 
 const linksRowStyle = {
@@ -219,7 +224,11 @@ const mobileMenuStyle = {
   right: 0,
   background: "#18193F",
   borderBottom: "1px solid rgba(255,255,255,0.12)",
-  padding: 8,
+  padding: 12,
+  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+  zIndex: 999,
+  maxHeight: "calc(100vh - 60px)",
+  overflowY: "auto",
 };
 
 export default Navbar;

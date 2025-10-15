@@ -3,8 +3,9 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { motion } from 'framer-motion';
+import QRCode from 'qrcode';
 // Added Calendar for consistency with modern passes
-import { User, GraduationCap, Route as RouteIcon, MapPin, QrCode, CreditCard, Bus, Calendar } from 'lucide-react'; 
+import { User, GraduationCap, Route as RouteIcon, MapPin, QrCode, CreditCard, Bus, Calendar } from 'lucide-react';
 
 /**
  * Helper function to safely convert Firestore Timestamp to a Date object.
@@ -18,6 +19,7 @@ const toDate = (v) => (v && typeof v.toDate === 'function') ? v.toDate() : (v in
 function StudentBusPassView() {
   const [busPass, setBusPass] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   useEffect(() => {
     const fetchBusPass = async () => {
@@ -74,6 +76,66 @@ function StudentBusPassView() {
         }
 
         setBusPass(latestPass);
+        
+        // Generate unique QR code for approved passes
+        if (latestPass && latestPass.status === 'approved') {
+          // Calculate proper validity dates
+          const approvalDate = toDate(latestPass.approvalDate) || toDate(latestPass.approvedAt) || new Date();
+          const validityPeriodDays = latestPass.validityPeriod || 365; // Default 1 year
+          const calculatedValidUntil = new Date(approvalDate.getTime() + validityPeriodDays * 24 * 60 * 60 * 1000);
+          const finalValidUntil = toDate(latestPass.validUntil) || calculatedValidUntil;
+          
+          // Create comprehensive QR data that can be easily scanned and verified
+          const qrData = {
+            type: 'bus-pass',
+            version: '1.0',
+            passId: `${user.uid}-${approvalDate.getTime()}`,
+            student: {
+              id: user.uid,
+              name: latestPass.studentName,
+              usn: latestPass.usn,
+              profileType: latestPass.profileType || 'Student',
+              year: latestPass.year || ''
+            },
+            transport: {
+              route: latestPass.routeName,
+              pickup: latestPass.pickupPoint
+            },
+            validity: {
+              issuedOn: approvalDate.toISOString(),
+              validUntil: finalValidUntil.toISOString(),
+              status: 'active'
+            },
+            verification: {
+              issuer: 'Campus Transport Authority',
+              verifyUrl: `${window.location.origin}/verify-pass`,
+              scanTimestamp: new Date().toISOString()
+            }
+          };
+          
+          // Create a verification URL that can be easily scanned and opened
+          const verificationUrl = `${window.location.origin}/verify-pass?data=${encodeURIComponent(JSON.stringify(qrData))}`;
+          
+          // Generate QR code with the verification URL for easy scanning
+          try {
+            const qrUrl = await QRCode.toDataURL(verificationUrl, {
+              width: 256, // Larger size for better scanning
+              margin: 4,  // More margin for better edge detection
+              errorCorrectionLevel: 'H', // High error correction for better reliability
+              type: 'image/png',
+              quality: 0.92,
+              color: {
+                dark: '#000000',  // Pure black for maximum contrast
+                light: '#FFFFFF'  // Pure white background
+              }
+            });
+            setQrCodeUrl(qrUrl);
+            console.log('🔗 QR Code verification URL:', verificationUrl);
+            console.log('📱 QR Code optimized for camera scanning');
+          } catch (qrError) {
+            console.error('Error generating QR code:', qrError);
+          }
+        }
 
       } catch (error) {
         console.error("Error fetching bus pass:", error);
@@ -169,8 +231,50 @@ function StudentBusPassView() {
 
           <div className="epass-right">
             {busStatus === 'approved' ? (
-                <div className="epass-qr" aria-label="QR code placeholder">
-                  <QrCode size={22} className="epass-qr-ico" />
+                <div className="epass-qr-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <div className="epass-qr" aria-label="Unique QR code for this user" style={{ marginBottom: '8px' }}>
+                    {qrCodeUrl ? (
+                      <img 
+                        src={qrCodeUrl} 
+                        alt="QR Code for Bus Pass Verification" 
+                        style={{
+                          width: '110px', 
+                          height: '110px', 
+                          borderRadius: '6px',
+                          border: '1px solid #d1d5db',
+                          cursor: 'pointer',
+                          display: 'block',
+                          background: '#ffffff',
+                          padding: '4px'
+                        }} 
+                        title="Scan this QR code to verify the bus pass"
+                        onClick={() => {
+                          // Show QR code in larger view
+                          const newWindow = window.open('', '_blank', 'width=500,height=500');
+                          newWindow.document.write(`
+                            <html>
+                              <head>
+                                <title>Bus Pass QR Code</title>
+                                <meta name="viewport" content="width=device-width, initial-scale=1">
+                              </head>
+                              <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f9fafb;font-family:system-ui,sans-serif">
+                                <div style="text-align:center;padding:20px;background:white;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.1);max-width:90vw">
+                                  <h3 style="margin:0 0 20px;color:#1f2937">Bus Pass Verification</h3>
+                                  <div style="background:white;padding:16px;border-radius:12px;border:2px solid #e5e7eb;display:inline-block">
+                                    <img src="${qrCodeUrl}" alt="QR Code" style="width:280px;height:280px;display:block" />
+                                  </div>
+                                  <p style="margin:16px 0 0;color:#6b7280;font-size:14px;max-width:300px">Scan this code with any QR scanner or camera app to verify the bus pass</p>
+                                  <button onclick="window.close()" style="margin-top:16px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer">Close</button>
+                                </div>
+                              </body>
+                            </html>
+                          `);
+                        }}
+                      />
+                    ) : (
+                      <QrCode size={22} className="epass-qr-ico" />
+                    )}
+                  </div>
                 </div>
             ) : (
                 <div className="epass-qr placeholder-pending">
@@ -178,8 +282,28 @@ function StudentBusPassView() {
                     <span style={{fontSize: '0.75rem', marginTop: '5px'}}>Awaiting Approval</span>
                 </div>
             )}
-            <div className="epass-valid">Valid until: <b>{validUntilText}</b></div>
-            <div className="epass-sign">
+            
+            {/* Separate valid until section with better spacing */}
+            <div className="epass-validity-section" style={{ marginTop: '16px', textAlign: 'center' }}>
+              <div className="epass-valid" style={{ 
+                fontSize: '12px', 
+                color: '#374151',
+                fontWeight: '600',
+                marginBottom: '12px',
+                padding: '6px 12px',
+                background: busStatus === 'approved' ? '#f0fdf4' : '#fef3f2',
+                border: `1px solid ${busStatus === 'approved' ? '#bbf7d0' : '#fecaca'}`,
+                borderRadius: '6px',
+                display: 'inline-block'
+              }}>
+                {busStatus === 'approved' ? '✅ Valid until: ' : '⏳ Pending approval'}
+                <span style={{ color: busStatus === 'approved' ? '#166534' : '#b91c1c' }}>
+                  {busStatus === 'approved' ? validUntilText : ''}
+                </span>
+              </div>
+            </div>
+            
+            <div className="epass-sign" style={{ marginTop: '8px' }}>
               <img src="/signature.png" alt="Signature" />
               <span>Authorised Signatory</span>
             </div>

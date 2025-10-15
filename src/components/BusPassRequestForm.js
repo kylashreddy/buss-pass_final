@@ -145,24 +145,46 @@ function BusPassRequestForm() {
   const pickupOptions = routeName ? routeData[routeName] || [] : [];
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center' }}>
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center',
+      padding: window.innerWidth <= 768 ? '12px' : '20px'
+    }}>
       <motion.div
         className="bus-pass-card"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        style={{ maxWidth: 820 }}
+        style={{ 
+          maxWidth: 820,
+          width: '100%',
+          margin: window.innerWidth <= 768 ? '0' : 'auto'
+        }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: window.innerWidth <= 768 ? 'flex-start' : 'center', 
+          justifyContent: 'space-between', 
+          marginBottom: 16,
+          flexDirection: window.innerWidth <= 480 ? 'column' : 'row',
+          gap: window.innerWidth <= 480 ? '8px' : '0'
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span className="icon-badge-sm" style={{ background: 'rgba(24,25,63,0.08)', color: '#18193F' }}>
               <Bus size={18} />
             </span>
-            <h2 style={{ margin: 0 }}>Apply for Bus E‑Pass</h2>
+            <h2 style={{ 
+              margin: 0,
+              fontSize: window.innerWidth <= 768 ? '18px' : '22px'
+            }}>Apply for Bus E‑Pass</h2>
           </div>
           {currentUserData && (
-            <span style={{ fontSize: 12, color: '#6b7280' }}>Logged in as {currentUserData.name} ({currentUserData.usn})</span>
+            <span style={{ 
+              fontSize: window.innerWidth <= 768 ? 11 : 12, 
+              color: '#6b7280',
+              textAlign: window.innerWidth <= 480 ? 'left' : 'right'
+            }}>Logged in as {currentUserData.name} ({currentUserData.usn})</span>
           )}
         </div>
 

@@ -22,6 +22,7 @@ import AdminUsersTable from './components/AdminUsersTableClean';
 import AllData from './components/AllData'; // ✅ Correct
 import AdminNotifications from './components/AdminNotifications';
 import UserNotifications from './components/UserNotifications';
+import PassVerification from './components/PassVerification';
 
 
 
@@ -382,9 +383,31 @@ if (userDocSnap.exists() && userDocSnap.data().role === "student") {
             }
           />
 
+          {/* Public verification route - accessible to everyone */}
+          <Route
+            path="/verify-pass"
+            element={
+              <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                <PassVerification />
+              </motion.div>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}
+
+      {/* Global public routes - accessible even when logged in */}
+      <Routes>
+        <Route
+          path="/verify-pass"
+          element={
+            <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+              <PassVerification />
+            </motion.div>
+          }
+        />
+      </Routes>
     </Router>
   );
 }

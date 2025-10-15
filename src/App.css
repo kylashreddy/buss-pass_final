@@ -28,6 +28,36 @@
   z-index: 1000;
 }
 
+/* Mobile navbar adjustments */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 8px 16px;
+    flex-wrap: wrap;
+  }
+  
+  .logo {
+    font-size: 1.1rem;
+  }
+  
+  .nav-links {
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #facc15;
+    padding: 16px;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .nav-links a {
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: block;
+  }
+}
+
 .logo {
   color: black;
   font-weight: bold;
@@ -74,6 +104,23 @@
   padding: 20px;
   min-height: calc(100vh - 80px);
   background: #f9f9f9;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Mobile page content adjustments */
+@media (max-width: 768px) {
+  .page-content {
+    margin-top: 60px;
+    padding: 16px 12px;
+    min-height: calc(100vh - 60px);
+  }
+}
+
+@media (max-width: 480px) {
+  .page-content {
+    padding: 12px 8px;
+  }
 }
 
 /* Auth (Login/Register) */
@@ -84,6 +131,30 @@
   gap: 40px;
   padding-top: 100px; /* spacing below navbar */
   flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Mobile auth container */
+@media (max-width: 968px) {
+  .auth-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding-top: 40px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    padding-top: 20px;
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 20px;
+  }
 }
 
 .auth-left {
@@ -116,6 +187,26 @@
   width: 100%;
   max-width: 480px;     /* slightly wider login/signup */
   transition: transform 0.2s ease;
+  margin: 0 auto;
+}
+
+/* Mobile card adjustments */
+@media (max-width: 768px) {
+  .card {
+    padding: 24px 20px;
+    margin: 0 12px;
+    max-width: calc(100vw - 24px);
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 20px 16px;
+    margin: 0 8px;
+    max-width: calc(100vw - 16px);
+    border-radius: 8px;
+  }
 }
 
 .card:hover {
@@ -134,6 +225,21 @@
 
 .card input:focus {
   border-color: #4a90e2;
+}
+
+/* Mobile input adjustments */
+@media (max-width: 768px) {
+  .card input {
+    padding: 12px 14px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+@media (max-width: 480px) {
+  .card input {
+    padding: 10px 12px;
+    margin: 8px 0;
+  }
 }
 
 .card button {
@@ -166,6 +272,97 @@
   box-shadow: 0 10px 24px rgba(0,0,0,0.12);
   text-align: left;
   overflow: hidden;
+}
+
+/* Mobile bus pass card */
+@media (max-width: 768px) {
+  .bus-pass-card {
+    padding: 20px 24px;
+    margin: 16px 12px;
+    max-width: calc(100vw - 24px);
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bus-pass-card {
+    padding: 16px 20px;
+    margin: 12px 8px;
+    max-width: calc(100vw - 16px);
+    border-radius: 8px;
+  }
+  
+  .bus-pass-card h2 {
+    font-size: 18px;
+  }
+}
+
+/* Comprehensive Mobile Responsive Additions */
+
+/* Tables responsive */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+@media (max-width: 768px) {
+  /* Hide table on mobile, show card layout */
+  .desktop-table {
+    display: none;
+  }
+  
+  .mobile-cards {
+    display: block;
+  }
+  
+  /* Button improvements */
+  .btn-chip {
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 36px;
+  }
+  
+  /* Modal improvements */
+  .modal-overlay {
+    padding: 16px;
+  }
+  
+  .modal {
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+    margin: 0 !important;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Very small screens */
+  h1 { font-size: 20px; }
+  h2 { font-size: 18px; }
+  h3 { font-size: 16px; }
+  
+  .btn-chip {
+    padding: 6px 10px;
+    font-size: 13px;
+    min-height: 32px;
+  }
+  
+  /* Form adjustments */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+}
+
+/* Desktop default for mobile cards */
+.mobile-cards {
+  display: none;
+}
+
+.desktop-table {
+  display: block;
 }
 .bus-pass-card::before {
   content: "";
@@ -447,9 +644,12 @@
   margin-bottom: 8px;
 }
 .notif-item.accepted { opacity: 0.8; background: #f8fff9; }
+.notif-item.read { opacity: 0.7; background: #f9fafb; }
+.notif-item.new { background: #fffbeb; border-color: #f59e0b; }
 .notif-text { min-width: 0; }
 .notif-title { font-weight: 700; font-size: 14px; color: #111827; margin-bottom: 4px; }
-.notif-message { color: #374151; font-size: 13px; }
+.notif-message { color: #374151; font-size: 13px; margin-bottom: 4px; }
+.notif-time { color: #6b7280; font-size: 11px; }
 .notif-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 /* Admin Notifications page */
