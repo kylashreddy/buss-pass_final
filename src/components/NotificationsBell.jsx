@@ -1,36 +1,54 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react"; // 👈 Import useRef
 import { Link } from "react-router-dom";
 import { db } from "../firebase";
 import { collection, onSnapshot, query, where, orderBy, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { debugNotifications, testUpdateNotification } from '../utils/notificationDebug';
 
-function NotificationsBell({ user, userRole }) {
+function NotificationsBell({ user, userRole, isMobile }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [userActions, setUserActions] = useState({});
+  const bellRef = useRef(null); // 👈 Create a ref for the component container
+
+  // --- Click Outside Logic ---
+  useEffect(() => {
+    if (!open) return; // Only attach listener when the menu is open
+
+    const handleClickOutside = (event) => {
+      // Check if the click is outside the bellRef container
+      if (bellRef.current && !bellRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open]); // Re-run effect when 'open' changes
+  // ---------------------------
 
   useEffect(() => {
     if (!user) return;
-    
-    // Load notifications
+
     const notificationsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
       orderBy("createdAt", "desc")
     );
-    
+
     const unsubNotifications = onSnapshot(notificationsQuery, (snap) => {
       const arr = [];
       snap.forEach((d) => arr.push({ id: d.id, ...d.data() }));
       setItems(arr);
     });
-    
-    // Load user actions
+
     const actionsQuery = query(
       collection(db, "userNotificationActions"),
       where("userId", "==", user.uid)
     );
-    
+
     const unsubActions = onSnapshot(actionsQuery, (snap) => {
       const actions = {};
       snap.forEach((d) => {
@@ -39,95 +57,50 @@ function NotificationsBell({ user, userRole }) {
       });
       setUserActions(actions);
     });
-    
+
     return () => {
       unsubNotifications();
       unsubActions();
     };
   }, [user]);
 
-  // Filter out deleted notifications and calculate unread count based on user actions
-  const visibleItems = useMemo(() => {
-    return items.filter(item => userActions[item.id] !== 'deleted');
-  }, [items, userActions]);
-  
-  const unreadCount = useMemo(() => {
-    return visibleItems.filter(item => {
-      // Check if user has marked as read
-      if (userActions[item.id] === 'read') return false;
-      // Otherwise, check original status
-      return !item.status || item.status === "new";
-    }).length;
-  }, [visibleItems, userActions]);
+  const visibleItems = useMemo(() => items.filter(item => userActions[item.id] !== 'deleted'), [items, userActions]);
+
+  const unreadCount = useMemo(() => visibleItems.filter(item => userActions[item.id] !== 'read' && (!item.status || item.status === "new")).length, [visibleItems, userActions]);
 
   const markAsRead = async (n) => {
     try {
-      console.log("🔄 Marking notification as read:", n.id);
-      
-      // Instead of updating the notification document, create a user action record
       const userActionRef = doc(db, "userNotificationActions", `${user.uid}_${n.id}`);
-      
       await setDoc(userActionRef, {
         userId: user.uid,
         notificationId: n.id,
         action: "read",
         timestamp: serverTimestamp()
       });
-      
-      console.log("✅ Successfully marked notification as read!");
-      
     } catch (e) {
-      console.error("❌ Mark as read failed:", e);
-      
-      if (e.code === 'permission-denied') {
-        alert('❌ Permission denied. Please try again or contact support.');
-      } else {
-        alert(`❌ Failed to mark notification as read: ${e.message}`);
-      }
+      console.error("Mark as read failed:", e);
+      alert(`Failed to mark as read: ${e.message}`);
     }
   };
 
   const deleteNotification = async (n) => {
     try {
-      // Instead of deleting the notification, mark it as hidden for this user
       const userActionRef = doc(db, "userNotificationActions", `${user.uid}_${n.id}`);
-      
       await setDoc(userActionRef, {
         userId: user.uid,
         notificationId: n.id,
         action: "deleted",
         timestamp: serverTimestamp()
       });
-      
-      console.log("Notification hidden for user:", n.id);
     } catch (e) {
       console.error("Delete failed", e);
-      alert("Failed to delete notification. Please try again.");
-    }
-  };
-
-  // Debug function to test notification functionality
-  const runDebug = async () => {
-    console.log('🔍 Running notification debug...');
-    const result = await debugNotifications();
-    console.log('Debug result:', result);
-    
-    if (result.notifications && result.notifications.length > 0) {
-      const firstNotif = result.notifications[0];
-      console.log('🧪 Testing update on first notification:', firstNotif.id);
-      try {
-        await testUpdateNotification(firstNotif.id);
-        console.log('✅ Test update successful!');
-      } catch (err) {
-        console.error('❌ Test update failed:', err);
-      }
+      alert("Failed to delete notification.");
     }
   };
 
   if (!user) return null;
 
-  // If the logged-in user is an admin, make the bell navigate to the admin
-  // notifications page instead of rendering the per-user dropdown.
+  // Admin bell links to admin notifications page
   if (userRole === "admin") {
     return (
       <div style={{ position: "relative" }}>
@@ -138,11 +111,113 @@ function NotificationsBell({ user, userRole }) {
     );
   }
 
+  // --- Style Definitions to Exactly Match the Screenshot ---
+  const NotificationCardStyle = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: '12px',
+    marginBottom: '8px',
+    borderRadius: '8px',
+    backgroundColor: '#fffcf2', // Very light cream/yellow
+    border: '1px solid #ffebcd',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+  };
+
+  const ContentStyle = {
+    flexGrow: 1,
+    paddingRight: '10px',
+  };
+
+  const TitleStyle = {
+    fontWeight: 700,
+    fontSize: '16px',
+    color: '#333',
+    marginBottom: '2px',
+  };
+
+  const MessageStyle = {
+    fontSize: '14px',
+    color: '#666',
+  };
+
+  const ButtonContainerStyle = {
+    display: "flex",
+    gap: '8px',
+    flexShrink: 0,
+  };
+
+  const BaseButtonStyle = {
+    fontSize: '14px',
+    padding: "6px 12px",
+    cursor: "pointer",
+    borderRadius: '20px', // Capsule shape
+    border: '1px solid',
+    fontWeight: 500,
+    transition: 'background-color 0.2s',
+    whiteSpace: 'nowrap',
+    minHeight: '30px', // Ensure consistent height
+  };
+
+  const MarkReadButtonStyle = {
+    ...BaseButtonStyle,
+    backgroundColor: '#e3fbe3',
+    color: '#1e8449',
+    borderColor: '#98df98',
+    display: 'flex', // For aligning dot and text
+    alignItems: 'center',
+  };
+
+  const DeleteButtonStyle = {
+    ...BaseButtonStyle,
+    backgroundColor: '#ffe3e3',
+    color: '#cc0000',
+    borderColor: '#ff9898',
+  };
+
+  const ReadStatusDotStyle = {
+    fontSize: '16px',
+    color: '#1e8449',
+    marginRight: '4px',
+  };
+  // -------------------------------------
+
+
+  const popupStyle = isMobile
+    ? {
+        position: "fixed",
+        bottom: 60, // 👈 Phone notification at the bottom
+        left: 0,
+        right: 0,
+        width: "100%",
+        maxHeight: "50vh",
+        overflowY: "auto",
+        background: "#fff",
+        zIndex: 1100,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+        padding: 8
+      }
+    : {
+        position: "absolute",
+        top: "100%",
+        right: 0,
+        background: "#fff",
+        width: 380,
+        maxHeight: 400,
+        overflowY: "auto",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+        borderRadius: 8,
+        padding: 8
+      };
+
   return (
-    <div style={{ position: "relative" }}>
+    // Attach the ref to the root element of the bell component
+    <div style={{ position: "relative" }} ref={bellRef}> 
       <button
         className="btn-chip"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(v => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
         title="Notifications"
@@ -151,44 +226,48 @@ function NotificationsBell({ user, userRole }) {
       </button>
 
       {open && (
-        <div className="notif-dropdown" role="menu" aria-label="Notifications">
+        <div style={popupStyle} role="menu" aria-label="Notifications">
           {visibleItems.length === 0 ? (
-            <div className="notif-empty">No notifications</div>
+            <div style={{ padding: 12, textAlign: "center", color: "#666" }}>No notifications</div>
           ) : (
             visibleItems.map((n) => {
               const isRead = userActions[n.id] === 'read';
-              const displayStatus = isRead ? 'read' : (n.status || 'new');
-              
+              // Adjust background for read status
+              const cardStyle = isRead
+                ? { ...NotificationCardStyle, backgroundColor: '#f5f5f5', border: '1px solid #ddd' }
+                : NotificationCardStyle;
+
               return (
-                <div key={n.id} className={`notif-item ${displayStatus}`}>
-                  <div className="notif-text">
-                    <div className="notif-title">{n.title || "Notification"}</div>
-                    <div className="notif-message">{n.message || "—"}</div>
+                // Notification Card Container
+                <div 
+                  key={n.id} 
+                  style={cardStyle}
+                >
+                  {/* Message Content */}
+                  <div style={ContentStyle}>
+                    <div style={TitleStyle}>{n.title || "Notification"}</div>
+                    <div style={MessageStyle}>{n.message || "—"}</div>
                   </div>
-                  <div className="notif-actions">
+
+                  {/* Action Buttons (side-by-side as in the screenshot) */}
+                  <div style={ButtonContainerStyle}>
+                    {/* Mark Read Button */}
                     {!isRead && (
-                      <button 
-                        className="btn-chip btn-approve" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          markAsRead(n);
-                        }}
-                        title="Mark as read"
+                      <button
+                        style={MarkReadButtonStyle}
+                        onClick={e => { e.stopPropagation(); markAsRead(n); }}
                       >
-                        <span className="dot" /> Mark Read
+                        <span style={ReadStatusDotStyle}>•</span>
+                        Mark Read
                       </button>
                     )}
-                    <button 
-                      className="btn-chip btn-delete" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm('Are you sure you want to delete this notification?')) {
-                          deleteNotification(n);
-                        }
-                      }}
-                      title="Delete notification"
+                    
+                    {/* Delete Button */}
+                    <button
+                      style={DeleteButtonStyle}
+                      onClick={e => { e.stopPropagation(); if (window.confirm("Delete this notification?")) deleteNotification(n); }}
                     >
-                      <span className="dot" /> Delete
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -200,7 +279,4 @@ function NotificationsBell({ user, userRole }) {
     </div>
   );
 }
-
 export default NotificationsBell;
-
-

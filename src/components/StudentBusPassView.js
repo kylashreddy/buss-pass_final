@@ -1,35 +1,53 @@
 // src/components/StudentBusPassView.js
 import React, { useEffect, useState } from "react";
-import { auth, db } from "../firebase";
+import { auth, db, storage } from "../firebase"; // 👈 Ensure 'storage' is imported from '../firebase'
 import { collection, query, where, getDocs } from "firebase/firestore";
+// If you are using Firebase Storage, you need the following imports in your actual file:
+// import { getStorage, ref, getDownloadURL } from "firebase/storage"; 
 import { motion } from 'framer-motion';
 import QRCode from 'qrcode';
-// Added Calendar for consistency with modern passes
 import { User, GraduationCap, Route as RouteIcon, MapPin, QrCode, CreditCard, Bus, Calendar } from 'lucide-react';
 
 /**
  * Helper function to safely convert Firestore Timestamp to a Date object.
- * MOVED OUTSIDE THE COMPONENT TO PREVENT REDEFINITION ERROR.
  * @param {object} v - The value to convert.
  * @returns {Date|null}
  */
 const toDate = (v) => (v && typeof v.toDate === 'function') ? v.toDate() : (v instanceof Date ? v : null);
+
+/**
+ * MOCK: Placeholder for the actual Firebase Storage fetching function.
+ * You must replace this with your actual implementation using Firebase Storage SDK.
+ * @param {string} uid - The user's UID.
+ * @returns {Promise<string|null>} The download URL or null if not found.
+ */
+const getProfilePhotoUrl = async (uid) => {
+    // Replace this logic with your actual Firebase Storage fetching code
+    
+    // For now, return a placeholder URL if you have one, or null
+    return new Promise(resolve => setTimeout(() => resolve(null), 100)); // Simulate async fetch
+};
 
 
 function StudentBusPassView() {
   const [busPass, setBusPass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState(null); // 👈 New state for Storage URL
 
   useEffect(() => {
     const fetchBusPass = async () => {
       try {
         const user = auth.currentUser;
         if (!user) {
-            setLoading(false);
-            return;
+          setLoading(false);
+          return;
         }
 
+        // 1. Fetch Photo URL from Storage
+        const storedPhotoUrl = await getProfilePhotoUrl(user.uid);
+        setProfilePhotoUrl(storedPhotoUrl);
+        
         let allRequests = [];
         
         // Combined list of collections to search (Old and New)
@@ -40,9 +58,6 @@ function StudentBusPassView() {
         ];
 
         for (const colId of collectionsToSearch) {
-          // Use the secure UID (user.uid) for the studentId field
-          // Note: We intentionally remove the 'status == approved' filter
-          // here so students can see their 'pending' passes after requesting.
           const q = query(
             collection(db, colId),
             where("studentId", "==", user.uid)
@@ -54,7 +69,6 @@ function StudentBusPassView() {
             const data = docSnap.data();
             allRequests.push({ 
                 id: docSnap.id, 
-                // Use 'routeName' for the new structure, or fall back to the old collection ID
                 data: { routeName: data.routeName || colId, ...data }
             });
           });
@@ -65,7 +79,6 @@ function StudentBusPassView() {
         if (allRequests.length > 0) {
             // Sort all found requests (approved, pending, etc.) to get the most recent one
             const sortedRequests = allRequests.sort((a, b) => {
-                // Prioritize approvalDate/approvedAt, then requestDate for sorting
                 const aDate = toDate(a.data.approvalDate) || toDate(a.data.approvedAt) || toDate(a.data.requestDate);
                 const bDate = toDate(b.data.approvalDate) || toDate(b.data.approvedAt) || toDate(b.data.requestDate);
                 // Return newest pass
@@ -120,18 +133,16 @@ function StudentBusPassView() {
           try {
             const qrUrl = await QRCode.toDataURL(verificationUrl, {
               width: 256, // Larger size for better scanning
-              margin: 4,  // More margin for better edge detection
+              margin: 4,  // More margin for better edge detection
               errorCorrectionLevel: 'H', // High error correction for better reliability
               type: 'image/png',
               quality: 0.92,
               color: {
-                dark: '#000000',  // Pure black for maximum contrast
-                light: '#FFFFFF'  // Pure white background
+                dark: '#000000',  // Pure black for maximum contrast
+                light: '#FFFFFF'  // Pure white background
               }
             });
             setQrCodeUrl(qrUrl);
-            console.log('🔗 QR Code verification URL:', verificationUrl);
-            console.log('📱 QR Code optimized for camera scanning');
           } catch (qrError) {
             console.error('Error generating QR code:', qrError);
           }
@@ -148,7 +159,147 @@ function StudentBusPassView() {
     fetchBusPass();
   }, []);
 
-  if (loading) return <div className="page-content"><p>Loading your bus pass... 🚌</p></div>;
+  // Determine the photo URL to use: Storage URL takes precedence, then Firestore document URL
+  const finalPhotoUrl = profilePhotoUrl || (busPass ? busPass.photoUrl : null);
+
+  if (loading && !busPass) {
+  return (
+    <div
+      className="page-content"
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: "40px",
+      }}
+    >
+      <div
+        style={{
+          width: "400px",
+          background: "#fff",
+          borderRadius: "16px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          padding: "20px",
+          position: "relative",
+        }}
+      >
+        {/* Approved Badge */}
+        <div
+          style={{
+            width: "80px",
+            height: "24px",
+            borderRadius: "12px",
+            margin: "0 auto 16px",
+            background:
+              "linear-gradient(90deg, #f2f2f2 25%, #e6e6e6 50%, #f2f2f2 75%)",
+            backgroundSize: "200% 100%",
+            animation: "shimmer 1.5s infinite",
+          }}
+        />
+
+        {/* Profile Circle */}
+        <div
+          style={{
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            margin: "0 auto 12px",
+            background:
+              "linear-gradient(90deg, #f2f2f2 25%, #e6e6e6 50%, #f2f2f2 75%)",
+            backgroundSize: "200% 100%",
+            animation: "shimmer 1.5s infinite",
+          }}
+        />
+
+        {/* Name & Profile Info */}
+        <div style={{ marginBottom: "16px" }}>
+          {[60, 40, 80].map((width, i) => (
+            <div
+              key={i}
+              style={{
+                height: "12px",
+                width: `${width}%`,
+                margin: "6px auto",
+                borderRadius: "6px",
+                background:
+                  "linear-gradient(90deg, #f2f2f2 25%, #e6e6e6 50%, #f2f2f2 75%)",
+                backgroundSize: "200% 100%",
+                animation: "shimmer 1.5s infinite",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div
+          style={{
+            height: "1px",
+            backgroundColor: "#eee",
+            margin: "16px 0",
+          }}
+        />
+
+        {/* Route & Pickup Info */}
+        {[70, 50, 40].map((width, i) => (
+          <div
+            key={i}
+            style={{
+              height: "12px",
+              width: `${width}%`,
+              margin: "8px 0",
+              borderRadius: "6px",
+              background:
+                "linear-gradient(90deg, #f2f2f2 25%, #e6e6e6 50%, #f2f2f2 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.5s infinite",
+            }}
+          />
+        ))}
+
+        {/* QR Code Placeholder */}
+        <div
+          style={{
+            width: "120px",
+            height: "120px",
+            borderRadius: "12px",
+            margin: "20px auto",
+            background:
+              "linear-gradient(90deg, #f2f2f2 25%, #e6e6e6 50%, #f2f2f2 75%)",
+            backgroundSize: "200% 100%",
+            animation: "shimmer 1.5s infinite",
+          }}
+        />
+
+        {/* Signature Placeholder */}
+        <div
+          style={{
+            height: "12px",
+            width: "60%",
+            margin: "12px auto 0",
+            borderRadius: "6px",
+            background:
+              "linear-gradient(90deg, #f2f2f2 25%, #e6e6e6 50%, #f2f2f2 75%)",
+            backgroundSize: "200% 100%",
+            animation: "shimmer 1.5s infinite",
+          }}
+        />
+      </div>
+
+      <style>
+        {`
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+        `}
+      </style>
+    </div>
+  );
+}
+
+
+
+
 
   if (!busPass) {
     return <div className="page-content"><p>No bus pass request found. Please apply for one. 📝</p></div>;
@@ -176,56 +327,79 @@ function StudentBusPassView() {
           <div className="ticket-brand">
             <img src="/logo.png" alt="CampusBus Logo" className="ticket-logo" />
           </div>
-          {/* CRITICAL FIX: Corrected template literal syntax */}
           <div className={`ticket-status ${busStatus}`}> 
             {busStatus.toUpperCase()}
           </div>
         </div>
 
         {/* Profile row */}
-        <div className="ticket-profile">
-          {busPass.photoUrl ? (
-            <img src={busPass.photoUrl} alt="Profile" className="ticket-photo" />
+        <div className="ticket-profile" style={{ padding: '16px 20px 10px 20px' }}>
+          {/* 👈 Increased vertical padding for better spacing */}
+          {finalPhotoUrl ? ( 
+            <img src={finalPhotoUrl} alt="Profile" className="ticket-photo" />
           ) : (
-            <div className="ticket-photo placeholder"><User size={18} /></div>
+            <div className="ticket-photo placeholder"><User size={20} /></div>
           )}
           <div className="ticket-profile-info">
-            <div className="name">{busPass.studentName}</div>
-            <div className="muted">USN: {busPass.usn}</div>
-            <div className="muted">Profile: {busPass.profileType || 'Student'} • Year: {busPass.year || '—'}</div>
+            {/* 👈 Name font size increased */}
+            <div className="name" style={{ fontSize: '1.2rem', fontWeight: 700 }}>{busPass.studentName}</div>
+            {/* 👈 Muted text font size increased */}
+            <div className="muted" style={{ fontSize: '0.9rem' }}>USN: {busPass.usn}</div>
+            <div className="muted" style={{ fontSize: '0.9rem' }}>Profile: {busPass.profileType || 'Student'} • Year: {busPass.year || '—'}</div>
           </div>
         </div>
 
         <div className="ticket-divider" />
 
         {/* Details section */}
-        <div className="ticket-body">
-          <div className="ticket-section-title">Campus E‑Pass</div>
-          <ul className="ticket-list">
-            <li><Bus size={16} /><span>{busPass.routeName}</span></li>
-            <li><MapPin size={16} /><span>{busPass.pickupPoint}</span></li>
+        <div className="ticket-body" style={{ padding: '10px 20px' }}>
+          <div className="ticket-section-title" style={{ fontSize: '0.9rem' }}>Campus E‑Pass</div>
+          
+          {/* 👈 Modified ticket-list to flex/grid for single line display */}
+          <ul className="ticket-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', padding: '0', listStyle: 'none', margin: '8px 0' }}>
+            {/* Route Name (Now on the same line as Pickup) */}
+            <li style={{ display: 'flex', alignItems: 'center', fontSize: '1rem', color: '#1f2937', fontWeight: 500 }}>
+                <Bus size={18} style={{ marginRight: '6px', color: '#10b981' }} />
+                <span style={{ whiteSpace: 'nowrap' }}>Route: {busPass.routeName}</span>
+            </li>
+            
+            {/* Pickup Point (Now on the same line as Route) */}
+            <li style={{ display: 'flex', alignItems: 'center', fontSize: '1rem', color: '#1f2937', fontWeight: 500 }}>
+                <MapPin size={18} style={{ marginRight: '6px', color: '#f59e0b' }} />
+                <span style={{ whiteSpace: 'nowrap' }}>Pickup: {busPass.pickupPoint}</span>
+            </li>
+            
+            {/* Validity date moved below or kept separate as it doesn't fit the 'key-value' pair flow */}
             {busStatus === 'approved' && 
-             <li><RouteIcon size={16} /><span>Valid until: {validUntilText}</span></li>
+              <li style={{ display: 'flex', alignItems: 'center', fontSize: '0.9rem', color: '#4b5563' }}>
+                <RouteIcon size={16} style={{ marginRight: '6px' }} />
+                <span style={{ whiteSpace: 'nowrap' }}>Valid until: {validUntilText}</span>
+              </li>
             }
           </ul>
-          <div className="ticket-time">{busStatus === 'approved' ? 'Approved' : 'Requested'} {issuedText}</div>
+          {/* ------------------------------------------------------------- */}
+          
+          <div className="ticket-time" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '10px' }}>
+            {busStatus === 'approved' ? 'Approved' : 'Requested'} {issuedText}
+          </div>
         </div>
 
         {/* QR and signature */}
-        <div className="epass-body">
+        <div className="epass-body" style={{ padding: '20px' }}>
           <div className="epass-left">
-            {busPass.photoUrl ? (
-              <img src={busPass.photoUrl} alt="Profile" className="epass-photo" />
+            {finalPhotoUrl ? (
+              <img src={finalPhotoUrl} alt="Profile" className="epass-photo" />
             ) : (
-              <div className="epass-photo placeholder"><User size={18} /></div>
+              <div className="epass-photo placeholder"><User size={20} /></div>
             )}
             <div className="epass-fields">
-              <div className="epass-kv"><span className="ico"><User size={14} /></span><span className="lab">Name</span><span className="val">{busPass.studentName}</span></div>
-              <div className="epass-kv"><span className="ico"><CreditCard size={14} /></span><span className="lab">USN</span><span className="val">{busPass.usn}</span></div>
-              <div className="epass-kv"><span className="ico"><Bus size={14} /></span><span className="lab">Profile</span><span className="val">{busPass.profileType || 'Student'}</span></div>
-              <div className="epass-kv"><span className="ico"><GraduationCap size={14} /></span><span className="lab">Year</span><span className="val">{busPass.year || '—'}</span></div>
-              <div className="epass-kv"><span className="ico"><RouteIcon size={14} /></span><span className="lab">Route</span><span className="val">{busPass.routeName}</span></div>
-              <div className="epass-kv"><span className="ico"><MapPin size={14} /></span><span className="lab">Pickup</span><span className="val">{busPass.pickupPoint}</span></div>
+              {/* 👈 All epass-kv values font size increased */}
+              <div className="epass-kv" style={{ fontSize: '0.95rem' }}><span className="ico"><User size={14} /></span><span className="lab">Name</span><span className="val">{busPass.studentName}</span></div>
+              <div className="epass-kv" style={{ fontSize: '0.95rem' }}><span className="ico"><CreditCard size={14} /></span><span className="lab">USN</span><span className="val">{busPass.usn}</span></div>
+              <div className="epass-kv" style={{ fontSize: '0.95rem' }}><span className="ico"><Bus size={14} /></span><span className="lab">Profile</span><span className="val">{busPass.profileType || 'Student'}</span></div>
+              <div className="epass-kv" style={{ fontSize: '0.95rem' }}><span className="ico"><GraduationCap size={14} /></span><span className="lab">Year</span><span className="val">{busPass.year || '—'}</span></div>
+              <div className="epass-kv" style={{ fontSize: '0.95rem' }}><span className="ico"><RouteIcon size={14} /></span><span className="lab">Route</span><span className="val">{busPass.routeName}</span></div>
+              <div className="epass-kv" style={{ fontSize: '0.95rem' }}><span className="ico"><MapPin size={14} /></span><span className="lab">Pickup</span><span className="val">{busPass.pickupPoint}</span></div>
             </div>
           </div>
 
@@ -286,11 +460,11 @@ function StudentBusPassView() {
             {/* Separate valid until section with better spacing */}
             <div className="epass-validity-section" style={{ marginTop: '16px', textAlign: 'center' }}>
               <div className="epass-valid" style={{ 
-                fontSize: '12px', 
+                fontSize: '14px', // 👈 Increased font size
                 color: '#374151',
                 fontWeight: '600',
                 marginBottom: '12px',
-                padding: '6px 12px',
+                padding: '8px 14px', // 👈 Increased padding
                 background: busStatus === 'approved' ? '#f0fdf4' : '#fef3f2',
                 border: `1px solid ${busStatus === 'approved' ? '#bbf7d0' : '#fecaca'}`,
                 borderRadius: '6px',
@@ -303,9 +477,9 @@ function StudentBusPassView() {
               </div>
             </div>
             
-            <div className="epass-sign" style={{ marginTop: '8px' }}>
-              <img src="/signature.png" alt="Signature" />
-              <span>Authorised Signatory</span>
+            
+            <div className="epass-sign" style={{ height: '24px', marginTop: '8px' }}>
+              {/* Signature area left empty */}
             </div>
           </div>
         </div>

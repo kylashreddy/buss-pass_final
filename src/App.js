@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
@@ -7,9 +6,10 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { logLoginEvent } from "./utils/logLoginEvent";
 import { motion } from 'framer-motion';
+
+// Components
 import TrackingPlaceholder from './components/TrackingPlaceholder';
 import Home from './components/Home';
-
 import SignUpForm from './components/SignUpForm';
 import LoginForm from './components/LoginForm';
 import BusPassRequestForm from './components/BusPassRequestForm';
@@ -17,14 +17,66 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminComplaints from './components/AdminComplaints';
 import StudentBusPassView from './components/StudentBusPassView';
 import Navbar from "./components/Navbar";
-import ContactUs from "./components/ContactUs";
+import ContactUs from './components/ContactUs';
 import AdminUsersTable from './components/AdminUsersTableClean';
-import AllData from './components/AllData'; // ✅ Correct
+import AllData from './components/AllData'; 
 import AdminNotifications from './components/AdminNotifications';
 import UserNotifications from './components/UserNotifications';
 import PassVerification from './components/PassVerification';
 
+// Helper to safely convert Firestore Timestamp to Date
+const toDate = (v) => {
+  if (!v) return null;
+  if (typeof v.toDate === "function") return v.toDate();
+  return v instanceof Date ? v : null;
+};
 
+// Component to wrap page content with animation
+const PageWrapper = ({ children }) => (
+  <motion.div
+    className="page-content"
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, ease: 'easeOut' }}
+  >
+    {children}
+  </motion.div>
+);
+
+// Component for Auth Page (Login/Register)
+const AuthPage = ({ showRegister, setShowRegister }) => (
+  <motion.div className="auth-container" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+    <div className="auth-left">
+      <img src="/logo.png" alt="Bus" />
+      <h2>CampusBus Login</h2>
+      <p>Access bus e-pass, tracking, and payments with your university credentials.</p>
+    </div>
+
+    <div className="card">
+      <div style={{ display: "flex", alignItems: "center", marginBottom: "20px" }}>
+        <img src="/logo.png" alt="CampusBus Logo" style={{ width: "50px", height: "50px", marginRight: "12px", borderRadius: "50%" }} />
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>CampusBus Portal</h1>
+          <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>Student • Teacher • Admin</p>
+        </div>
+      </div>
+
+      {showRegister ? <SignUpForm /> : <LoginForm />}
+
+      <p style={{ marginTop: "20px" }}>
+        {showRegister ? (
+          <>Already registered?{' '}
+            <span onClick={() => setShowRegister(false)} style={{ color: "#3B82F6", cursor: "pointer", fontWeight: "bold" }}>Login here</span>
+          </>
+        ) : (
+          <>Not registered yet?{' '}
+            <span onClick={() => setShowRegister(true)} style={{ color: "#3B82F6", cursor: "pointer", fontWeight: "bold" }}>Register here</span>
+          </>
+        )}
+      </p>
+    </div>
+  </motion.div>
+);
 
 
 function App() {
@@ -33,12 +85,63 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [hasApprovedPass, setHasApprovedPass] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [checkingPass, setCheckingPass] = useState(true); 
+
+  // --- PASS CHECK LOGIC (Moved outside useEffect for readability) ---
+  const checkApprovedPass = async (uid) => {
+    if (!uid) {
+        setHasApprovedPass(false);
+        setCheckingPass(false);
+        return;
+    }
+    
+    setCheckingPass(true);
+    const routeCollections = [
+      "busPassRequests", 
+      ...Array.from({ length: 12 }, (_, i) => `route-${i + 1}`)
+    ];
+
+    let isAnyValid = false;
+    const now = new Date();
+
+    const queries = routeCollections.map(col => 
+      getDocs(query(
+        collection(db, col),
+        where("studentId", "==", uid),
+        where("status", "==", "approved")
+      ))
+    );
+
+    const snapshots = await Promise.all(queries);
+
+    for (const snapshot of snapshots) {
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        const approvedAt = toDate(data.approvedAt) || toDate(data.requestDate);
+        const validUntil = toDate(data.validUntil) || 
+                           (approvedAt ? new Date(approvedAt.getTime() + 365 * 24 * 60 * 60 * 1000) : null);
+        
+        if (validUntil && validUntil > now) {
+          isAnyValid = true;
+          break;
+        }
+      }
+      if (isAnyValid) break; 
+    }
+
+    setHasApprovedPass(isAnyValid);
+    setCheckingPass(false);
+  };
+  // -------------------------
+
 
   useEffect(() => {
     document.body.style.backgroundColor = "#F9FAFB";
     document.documentElement.style.backgroundColor = "#F9FAFB";
+    setCheckingPass(true);
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
       if (currentUser) {
         setUser(currentUser);
 
@@ -47,71 +150,37 @@ function App() {
           const userDocSnap = await getDoc(userDocRef);
 
           if (userDocSnap.exists()) {
-            setUserRole(userDocSnap.data().role || "student"); // fallback
-          } else {
-            // If no doc yet, assume student (SignUpForm writes one)
-            setUserRole("student");
-          }
-
-          // Log login on session restore or external login (avoid duplicate if already logged via LoginForm)
-          try {
-            const profile = userDocSnap.exists() ? userDocSnap.data() : null;
+            const role = userDocSnap.data().role || "student";
+            setUserRole(role);
+            
+            const profile = userDocSnap.data();
             await logLoginEvent(db, currentUser, profile);
-          } catch (logErr) {
-            console.warn("Login log (App) failed:", logErr);
+
+            if (role === "student") {
+              await checkApprovedPass(currentUser.uid);
+            } else {
+              setHasApprovedPass(false);
+              setCheckingPass(false);
+            }
+          } else {
+            // 🛑 FIX: New user authenticated but no Firestore document found (must be new registration flow)
+            console.log("New user detected (no Firestore profile). Redirecting to application.");
+            setUserRole("student"); // Assume student role to route them correctly
+            setHasApprovedPass(false); // Definitely no pass yet
+            setCheckingPass(false); // Stop loading sequence
           }
-
-          // Only check passes for students
-        // Only check approved passes for students across route collections
-if (userDocSnap.exists() && userDocSnap.data().role === "student") {
-  const routeCollections = [
-    "route-1","route-2","route-3","route-4","route-5","route-6",
-    "route-7","route-8","route-9","route-10","route-11","route-12"
-  ];
-
-  const toDate = (v) => {
-    if (!v) return null;
-    if (typeof v.toDate === "function") return v.toDate();
-    return v instanceof Date ? v : null;
-  };
-
-  let isAnyValid = false;
-  const now = new Date();
-
-  for (const routeCol of routeCollections) {
-    const q = query(
-      collection(db, routeCol),
-      where("studentId", "==", currentUser.uid),
-      where("status", "==", "approved")
-    );
-    const querySnapshot = await getDocs(q);
-
-    querySnapshot.forEach((docSnap) => {
-      const d = docSnap.data();
-      const approvedAt = toDate(d.approvedAt) || toDate(d.requestDate);
-      const validUntil = toDate(d.validUntil) || (approvedAt ? new Date(approvedAt.getTime() + 365*24*60*60*1000) : null);
-      if (validUntil && validUntil > now) {
-        isAnyValid = true;
-      }
-    });
-
-    if (isAnyValid) break; // stop once we find one valid pass
-  }
-
-  setHasApprovedPass(isAnyValid);
-} else {
-  setHasApprovedPass(false);
-}
 
         } catch (err) {
-          console.error("Error fetching user doc:", err);
+          console.error("Error fetching user doc/pass:", err);
           setUserRole(null);
           setHasApprovedPass(false);
+          setCheckingPass(false);
         }
       } else {
         setUser(null);
         setUserRole(null);
         setHasApprovedPass(false);
+        setCheckingPass(false);
       }
       setLoading(false);
     });
@@ -127,7 +196,7 @@ if (userDocSnap.exists() && userDocSnap.data().role === "student") {
     }
   };
 
-  if (loading) {
+  if (loading || checkingPass) {
     return (
       <div style={{
         fontFamily: 'Poppins, sans-serif',
@@ -140,11 +209,13 @@ if (userDocSnap.exists() && userDocSnap.data().role === "student") {
       </div>
     );
   }
+  
+  // Determine the default student path based on pass status
+  const studentDefaultPath = hasApprovedPass ? "/epass" : "/apply";
+
 
   return (
     <Router>
-      {/* Animated cursor removed */}
-      {/* Navbar always visible */}
       <Navbar user={user} userRole={userRole} handleLogout={handleLogout} hasApprovedPass={hasApprovedPass} />
 
       {user ? (
@@ -152,161 +223,48 @@ if (userDocSnap.exists() && userDocSnap.data().role === "student") {
           {/* STUDENT ROUTES */}
           {userRole === "student" && (
             <Routes>
-              <Route path="/" element={<Navigate to="/epass" replace />} />
-              <Route
-                path="/home"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <Home />
-                  </motion.div>
-                }
-              />
+              {/* CORE LOGIC: Dynamic Root Redirect */}
+              <Route path="/" element={<Navigate to={studentDefaultPath} replace />} /> 
+              
+              <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
 
-              <Route
-                path="/epass"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    {hasApprovedPass ? <StudentBusPassView /> : <BusPassRequestForm />}
-                  </motion.div>
-                }
-              />
-             
-
-              <Route
-                path="/tracking"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-<TrackingPlaceholder />
-                  </motion.div>
-                }
-              />
-
-              <Route
-                path="/apply"
+              {/* /epass route: Displays the pass view */}
+              <Route path="/epass" element={<PageWrapper><StudentBusPassView /></PageWrapper>} />
+              
+              {/* /apply route: Shows form OR redirects user away if they already have a pass */}
+              <Route 
+                path="/apply" 
                 element={
                   hasApprovedPass ? (
                     <Navigate to="/epass" replace />
                   ) : (
-                    <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                      <BusPassRequestForm />
-                    </motion.div>
+                    <PageWrapper><BusPassRequestForm /></PageWrapper>
                   )
-                }
+                } 
               />
-
-              <Route
-                path="/contact"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <ContactUs />
-                  </motion.div>
-                }
-              />
-
-              <Route
-                path="/notifications"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <UserNotifications user={user} />
-                  </motion.div>
-                }
-              />
-
-              {/* student cannot access admin */}
-              <Route
-                path="/admin/*"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <h2>Access Denied</h2>
-                  </motion.div>
-                }
-              />
-
-              <Route
-                path="*"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <h2>404 - Page Not Found</h2>
-                  </motion.div>
-                }
-              />
+              
+              <Route path="/tracking" element={<PageWrapper><TrackingPlaceholder /></PageWrapper>} />
+              <Route path="/contact" element={<PageWrapper><ContactUs /></PageWrapper>} />
+              <Route path="/notifications" element={<PageWrapper><UserNotifications user={user} /></PageWrapper>} />
+              <Route path="/verify-pass" element={<PageWrapper><PassVerification /></PageWrapper>} />
+              <Route path="/admin/*" element={<PageWrapper><h2>Access Denied</h2></PageWrapper>} />
+              <Route path="*" element={<PageWrapper><h2>404 - Page Not Found</h2></PageWrapper>} />
             </Routes>
           )}
 
           {/* ADMIN ROUTES */}
           {userRole === "admin" && (
             <Routes>
-              {/* Default route → requests */}
               <Route path="/" element={<Navigate to="/admin/requests" replace />} />
               <Route path="/admin" element={<Navigate to="/admin/requests" replace />} />
-
-
-              {/* Requests page */}
-              <Route
-                path="/admin/requests"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <AdminDashboard filterProfileType="all" />
-                  </motion.div>
-                }
-              />
-
-              {/* Users tables */}
-              <Route
-                path="/admin/users"
-                element={<Navigate to="/admin/users/students" replace />}
-              />
-              <Route
-                path="/admin/users/students"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <AdminUsersTable roleFilter="student" />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/admin/users/teachers"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <AdminUsersTable roleFilter="teacher" />
-                  </motion.div>
-                }
-              />
-
-              {/* Complaints page */}
-              <Route
-                path="/admin/complaints"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <AdminComplaints />
-                  </motion.div>
-                }
-              />
-              {/* Admin Notifications page */}
-              <Route
-                path="/admin/notifications"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <AdminNotifications />
-                  </motion.div>
-                }
-              />
-              {/* All Data page */}
-<Route
-  path="/admin/all-data"
-  element={
-    <motion.div
-      className="page-content"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-    >
-      <AllData />
-    </motion.div>
-  }
-/>
-
-             
+              <Route path="/admin/requests" element={<PageWrapper><AdminDashboard filterProfileType="all" /></PageWrapper>} />
+              <Route path="/admin/users" element={<Navigate to="/admin/users/students" replace />} />
+              <Route path="/admin/users/students" element={<PageWrapper><AdminUsersTable roleFilter="student" /></PageWrapper>} />
+              <Route path="/admin/users/teachers" element={<PageWrapper><AdminUsersTable roleFilter="teacher" /></PageWrapper>} />
+              <Route path="/admin/complaints" element={<PageWrapper><AdminComplaints /></PageWrapper>} />
+              <Route path="/admin/notifications" element={<PageWrapper><AdminNotifications /></PageWrapper>} />
+              <Route path="/admin/all-data" element={<PageWrapper><AllData /></PageWrapper>} />
+              <Route path="*" element={<Navigate to="/admin/requests" replace />} />
             </Routes>
           )}
 
@@ -314,100 +272,20 @@ if (userDocSnap.exists() && userDocSnap.data().role === "student") {
           {userRole === "teacher" && (
             <Routes>
               <Route path="/" element={<Navigate to="/home" replace />} />
-              <Route
-                path="/home"
-                element={
-                  <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                    <Home />
-                  </motion.div>
-                }
-              />
+              <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           )}
         </>
       ) : (
-        // UNAUTHENTICATED ROUTES: keep login at "/", add public "/home"
+        // UNAUTHENTICATED ROUTES
         <Routes>
-          <Route
-            path="/"
-            element={
-              <motion.div className="auth-container" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                <div className="auth-left">
-                  <img src="/logo.png" alt="Bus" />
-                  <h2>CampusBus Login</h2>
-                  <p>Access bus e-pass, tracking, and payments with your university credentials.</p>
-                </div>
-
-                <div className="card">
-                  <div style={{ display: "flex", alignItems: "center", marginBottom: "20px" }}>
-                    <img
-                      src="/logo.png"
-                      alt="CampusBus Logo"
-                      style={{ width: "50px", height: "50px", marginRight: "12px", borderRadius: "50%" }}
-                    />
-                    <div>
-                      <h1 style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>CampusBus Portal</h1>
-                      <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>Student • Teacher • Admin</p>
-                    </div>
-                  </div>
-
-                  {showRegister ? <SignUpForm /> : <LoginForm />}
-
-                  <p style={{ marginTop: "20px" }}>
-                    {showRegister ? (
-                      <>Already registered?{' '}
-                        <span onClick={() => setShowRegister(false)} style={{ color: "#3B82F6", cursor: "pointer", fontWeight: "bold" }}>
-                          Login here
-                        </span>
-                      </>
-                    ) : (
-                      <>Not registered yet?{' '}
-                        <span onClick={() => setShowRegister(true)} style={{ color: "#3B82F6", cursor: "pointer", fontWeight: "bold" }}>
-                          Register here
-                        </span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </motion.div>
-            }
-          />
-
-          <Route
-            path="/home"
-            element={
-              <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                <Home />
-              </motion.div>
-            }
-          />
-
-          {/* Public verification route - accessible to everyone */}
-          <Route
-            path="/verify-pass"
-            element={
-              <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-                <PassVerification />
-              </motion.div>
-            }
-          />
-
+          <Route path="/" element={<AuthPage showRegister={showRegister} setShowRegister={setShowRegister} />} />
+          <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
+          <Route path="/verify-pass" element={<PageWrapper><PassVerification /></PageWrapper>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}
-
-      {/* Global public routes - accessible even when logged in */}
-      <Routes>
-        <Route
-          path="/verify-pass"
-          element={
-            <motion.div className="page-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-              <PassVerification />
-            </motion.div>
-          }
-        />
-      </Routes>
     </Router>
   );
 }
