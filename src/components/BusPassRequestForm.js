@@ -1,7 +1,8 @@
 // src/components/BusPassRequestForm.js
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';
+import { db, auth, storage } from '../firebase';
 import { collection, addDoc, doc, getDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { motion } from 'framer-motion';
 import { Bus, MapPin, Route as RouteIcon, GraduationCap, Image as ImageIcon, Receipt } from 'lucide-react';
 
@@ -55,6 +56,11 @@ function BusPassRequestForm() {
   const [year, setYear] = useState('');
   const [profileType, setProfileType] = useState('student');
   const [notes, setNotes] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [paymentReceiptFile, setPaymentReceiptFile] = useState(null);
+  const [paymentReceiptPreview, setPaymentReceiptPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -80,58 +86,157 @@ function BusPassRequestForm() {
     fetchUserData();
   }, []);
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setSubmissionStatus(null);
-  setError(null);
+  // Handle photo file selection
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please upload a valid image file');
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Photo size must be less than 5MB');
+        return;
+      }
+      setPhotoFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-  if (!auth.currentUser || !currentUserData) {
-    setError("User not authenticated or data not loaded.");
-    return;
-  }
+  // Handle payment receipt file selection
+  const handlePaymentReceiptChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please upload a valid image file');
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Receipt size must be less than 5MB');
+        return;
+      }
+      setPaymentReceiptFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPaymentReceiptPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-  const requireYear = profileType !== 'teacher';
-  if (!routeName || !pickupPoint || (requireYear && !year)) {
-    setError(requireYear
-      ? "Please fill in all required fields (Route, Pickup, Year)."
-      : "Please fill in all required fields (Route, Pickup)."
-    );
-    return;
-  }
+  // Upload file to Firebase Storage
+  const uploadFile = async (file, path) => {
+    try {
+      // Ensure user is authenticated
+      if (!auth.currentUser) {
+        throw new Error('User must be authenticated to upload files');
+      }
+      
+      // Create storage reference
+      const storageRef = ref(storage, path);
+      
+      // Upload file
+      const snapshot = await uploadBytes(storageRef, file);
+      
+      // Get download URL - FIXED: changed from snapshot.reference to snapshot.ref
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+  };
 
-  try {
-    // 👇 convert "Route 1" → "route-1"
-    const routeCollection = routeName.toLowerCase().replace(/\s+/g, "-");
-
-    await addDoc(collection(db, routeCollection), {
-      studentId: auth.currentUser.uid,
-      usn: currentUserData.usn,
-      studentName: currentUserData.name,
-      routeName,
-      pickupPoint,
-      year: profileType !== 'teacher' ? year : null,
-      profileType,
-      notes: notes || null,
-      requestDate: new Date(),
-      status: "pending",
-    });
-
-    setSubmissionStatus("success");
-    setRouteName("");
-    setPickupPoint("");
-    setYear("");
-    setProfileType("student");
-    setNotes("");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmissionStatus(null);
     setError(null);
 
-    setTimeout(() => setSubmissionStatus(null), 5000);
+    if (!auth.currentUser || !currentUserData) {
+      setError("User not authenticated or data not loaded.");
+      return;
+    }
 
-  } catch (err) {
-    setError("Failed to submit request: " + err.message);
-    setSubmissionStatus("error");
-  }
-};
+    const requireYear = profileType !== 'teacher';
+    if (!routeName || !pickupPoint || (requireYear && !year)) {
+      setError(requireYear
+        ? "Please fill in all required fields (Route, Pickup, Year)."
+        : "Please fill in all required fields (Route, Pickup)."
+      );
+      return;
+    }
 
+    if (!photoFile) {
+      setError("Please upload your photo.");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      // Upload photo to Firebase Storage
+      const timestamp = Date.now();
+      const photoPath = `bus-pass-photos/${auth.currentUser.uid}/${timestamp}_photo.${photoFile.name.split('.').pop()}`;
+      const photoURL = await uploadFile(photoFile, photoPath);
+
+      // Upload payment receipt if provided
+      let paymentReceiptURL = null;
+      if (paymentReceiptFile) {
+        const receiptPath = `bus-pass-receipts/${auth.currentUser.uid}/${timestamp}_receipt.${paymentReceiptFile.name.split('.').pop()}`;
+        paymentReceiptURL = await uploadFile(paymentReceiptFile, receiptPath);
+      }
+
+      // Convert "Route 1" → "route-1"
+      const routeCollection = routeName.toLowerCase().replace(/\s+/g, "-");
+
+      // Save to Firestore
+      await addDoc(collection(db, routeCollection), {
+        studentId: auth.currentUser.uid,
+        usn: currentUserData.usn,
+        studentName: currentUserData.name,
+        routeName,
+        pickupPoint,
+        year: profileType !== 'teacher' ? year : null,
+        profileType,
+        notes: notes || null,
+        photoURL,
+        paymentReceiptURL,
+        requestDate: new Date(),
+        status: "pending",
+      });
+
+      setSubmissionStatus("success");
+      setRouteName("");
+      setPickupPoint("");
+      setYear("");
+      setProfileType("student");
+      setNotes("");
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setPaymentReceiptFile(null);
+      setPaymentReceiptPreview(null);
+      setError(null);
+
+      setTimeout(() => setSubmissionStatus(null), 5000);
+
+    } catch (err) {
+      setError("Failed to submit request: " + err.message);
+      setSubmissionStatus("error");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (loadingUserData) {
     return <div>Loading user information...</div>;
@@ -177,7 +282,7 @@ function BusPassRequestForm() {
             <h2 style={{ 
               margin: 0,
               fontSize: window.innerWidth <= 768 ? '18px' : '22px'
-            }}>Apply for Bus E‑Pass</h2>
+            }}>Apply for Bus E-Pass</h2>
           </div>
           {currentUserData && (
             <span style={{ 
@@ -190,7 +295,7 @@ function BusPassRequestForm() {
 
         {/* Highlights */}
         <ul style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, margin: '0 0 14px 0', paddingLeft: 18, color: '#374151' }}>
-          <li>Digital pass, campus‑ready</li>
+          <li>Digital pass, campus-ready</li>
           <li>Curated routes with clear stops</li>
           <li>Fast approval by admin</li>
         </ul>
@@ -242,7 +347,7 @@ function BusPassRequestForm() {
                   </option>
                 ))}
               </select>
-              <div className="help-text">This enables stop‑wise scheduling</div>
+              <div className="help-text">This enables stop-wise scheduling</div>
             </div>
 
             {/* Year Dropdown (students only) */}
@@ -279,21 +384,64 @@ function BusPassRequestForm() {
               <div className="help-text">Choose who the pass is for</div>
             </div>
 
-            {/* Disabled Uploads */}
+            {/* Photo Upload */}
             <div className="field">
               <div className="label-row">
                 <span className="icon-badge-sm"><ImageIcon size={16} /></span>
-                <label>Upload Your Photo (coming soon)</label>
+                <label htmlFor="photoUpload">Upload Your Photo *</label>
               </div>
-              <input type="file" disabled />
+              <input 
+                type="file" 
+                id="photoUpload"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                required
+                style={{ padding: '8px' }}
+              />
+              {photoPreview && (
+                <div style={{ marginTop: '10px' }}>
+                  <img 
+                    src={photoPreview} 
+                    alt="Preview" 
+                    style={{ 
+                      maxWidth: '150px', 
+                      maxHeight: '150px', 
+                      borderRadius: '8px',
+                      border: '2px solid #e5e7eb'
+                    }} 
+                  />
+                </div>
+              )}
+              <div className="help-text">This photo will appear on your bus pass</div>
             </div>
 
+            {/* Payment Receipt Upload */}
             <div className="field">
               <div className="label-row">
                 <span className="icon-badge-sm"><Receipt size={16} /></span>
-                <label>Upload Payment Receipt (coming soon)</label>
+                <label htmlFor="receiptUpload">Upload Payment Receipt (optional)</label>
               </div>
-              <input type="file" disabled />
+              <input 
+                type="file" 
+                id="receiptUpload"
+                accept="image/*"
+                onChange={handlePaymentReceiptChange}
+                style={{ padding: '8px' }}
+              />
+              {paymentReceiptPreview && (
+                <div style={{ marginTop: '10px' }}>
+                  <img 
+                    src={paymentReceiptPreview} 
+                    alt="Receipt Preview" 
+                    style={{ 
+                      maxWidth: '150px', 
+                      maxHeight: '150px', 
+                      borderRadius: '8px',
+                      border: '2px solid #e5e7eb'
+                    }} 
+                  />
+                </div>
+              )}
             </div>
 
             {/* Notes */}
@@ -307,8 +455,14 @@ function BusPassRequestForm() {
           </div>
 
           <div className="form-actions">
-            <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-              Submit Request
+            <motion.button 
+              type="submit" 
+              whileHover={{ scale: 1.01 }} 
+              whileTap={{ scale: 0.99 }}
+              disabled={uploading}
+              style={{ opacity: uploading ? 0.6 : 1 }}
+            >
+              {uploading ? 'Uploading...' : 'Submit Request'}
             </motion.button>
           </div>
         </form>

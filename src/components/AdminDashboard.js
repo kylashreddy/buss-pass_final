@@ -1,12 +1,10 @@
 // src/components/AdminDashboard.js
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
-// Ensure all necessary Firestore functions are imported
 import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore"; 
 
 // Helper function to safely get Firestore reference
 const getRequestRef = (routeCollection, requestId) => {
-    // The collection name could be 'busPassRequests' OR 'route-X'
     return doc(db, routeCollection, requestId); 
 }
 
@@ -15,12 +13,13 @@ function AdminDashboard({ filterProfileType = "all" }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showValidityModal, setShowValidityModal] = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [currentRequest, setCurrentRequest] = useState(null);
+    const [selectedRequest, setSelectedRequest] = useState(null);
 
     useEffect(() => {
-        // 🚀 FIX: Include the new centralized collection name
         const collectionsToMonitor = [
-            "busPassRequests", // Centralized collection
+            "busPassRequests",
             "route-1","route-2","route-3","route-4","route-5","route-6",
             "route-7","route-8","route-9","route-10","route-11","route-12"
         ];
@@ -42,7 +41,6 @@ function AdminDashboard({ filterProfileType = "all" }) {
                         requests.push({ id: docSnap.id, routeCol, ...docSnap.data() });
                     });
 
-                    // Update state, replacing old requests from this specific collection
                     setPendingRequests((prev) => {
                         const filteredPrev = prev.filter((r) => r.routeCol !== routeCol);
                         return [...filteredPrev, ...requests];
@@ -62,6 +60,12 @@ function AdminDashboard({ filterProfileType = "all" }) {
         return () => unsubscribes.forEach((unsub) => unsub());
     }, [filterProfileType]);
 
+    // Show request details with photo
+    const handleViewDetails = (request) => {
+        setSelectedRequest(request);
+        setShowDetailsModal(true);
+    };
+
     // Show approval modal with validity period options
     const handleApproveClick = (requestId, routeCollection) => {
         setCurrentRequest({ id: requestId, routeCollection });
@@ -73,7 +77,6 @@ function AdminDashboard({ filterProfileType = "all" }) {
         try {
             const requestRef = getRequestRef(routeCollection, requestId); 
             
-            // Calculate validity date based on custom period
             const approvalDate = new Date();
             const validUntil = new Date(approvalDate.getTime() + validityDays * 24 * 60 * 60 * 1000);
 
@@ -82,7 +85,7 @@ function AdminDashboard({ filterProfileType = "all" }) {
                 adminId: auth.currentUser.uid,
                 approvalDate: approvalDate,
                 validUntil: validUntil,
-                validityPeriod: validityDays, // Store the validity period for reference
+                validityPeriod: validityDays,
             });
 
             alert(`✅ Request approved! Valid for ${validityDays} days until ${validUntil.toLocaleDateString()}`);
@@ -102,7 +105,7 @@ function AdminDashboard({ filterProfileType = "all" }) {
             await updateDoc(requestRef, {
                 status: "rejected",
                 adminId: auth.currentUser.uid,
-                approvalDate: new Date(), // Using approvalDate for timeline tracking
+                approvalDate: new Date(),
                 rejectionReason: reason || "No reason provided",
             });
             alert("❌ Request rejected!");
@@ -123,10 +126,8 @@ function AdminDashboard({ filterProfileType = "all" }) {
                 ? "Teachers"
                 : "All Profiles";
 
-    // Reusable styles
     const thStyle = { padding: "10px", border: "1px solid #ddd", textAlign: "left" };
     const tdStyle = { padding: "10px", border: "1px solid #ddd" };
-
 
     return (
         <div style={{ padding: window.innerWidth <= 768 ? "12px" : "20px", maxWidth: "100%", overflow: "hidden" }}>
@@ -150,6 +151,7 @@ function AdminDashboard({ filterProfileType = "all" }) {
                         <table className="ui-table gray" style={{ minWidth: "1000px", width: "100%" }}>
                             <thead>
                                 <tr>
+                                    <th style={thStyle}>Photo</th>
                                     <th style={thStyle}>Name</th>
                                     <th style={thStyle}>USN</th>
                                     <th style={thStyle}>Route</th>
@@ -161,6 +163,36 @@ function AdminDashboard({ filterProfileType = "all" }) {
                             <tbody>
                                 {pendingRequests.map((req) => (
                                     <tr key={req.id}>
+                                        <td style={tdStyle}>
+                                            {req.photoURL ? (
+                                                <img 
+                                                    src={req.photoURL} 
+                                                    alt="Student" 
+                                                    style={{ 
+                                                        width: 50, 
+                                                        height: 50, 
+                                                        objectFit: 'cover', 
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onClick={() => handleViewDetails(req)}
+                                                />
+                                            ) : (
+                                                <div style={{ 
+                                                    width: 50, 
+                                                    height: 50, 
+                                                    background: '#e5e7eb', 
+                                                    borderRadius: '8px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '12px',
+                                                    color: '#6b7280'
+                                                }}>
+                                                    No photo
+                                                </div>
+                                            )}
+                                        </td>
                                         <td style={tdStyle}>{req.studentName}</td>
                                         <td style={tdStyle}>{req.usn}</td>
                                         <td style={tdStyle}>{req.routeName || req.routeCol}</td>
@@ -169,6 +201,13 @@ function AdminDashboard({ filterProfileType = "all" }) {
                                             <span className={`badge ${req.status || 'pending'}`}>{(req.status || 'pending').toUpperCase()}</span>
                                         </td>
                                         <td style={tdStyle}>
+                                            <button 
+                                                className="btn-chip" 
+                                                onClick={() => handleViewDetails(req)}
+                                                style={{ marginRight: 8, background: '#3b82f6', color: 'white' }}
+                                            >
+                                                View Details
+                                            </button>
                                             <button className="btn-chip btn-approve" onClick={() => handleApproveClick(req.id, req.routeCol)}>
                                                 <span className="dot" /> Approve
                                             </button>
@@ -190,9 +229,39 @@ function AdminDashboard({ filterProfileType = "all" }) {
                                 borderBottom: "1px solid #e5e7eb",
                                 background: "#fff"
                             }}>
-                                <div style={{ marginBottom: "12px" }}>
-                                    <h4 style={{ margin: "0 0 4px 0", fontSize: "16px" }}>{req.studentName}</h4>
-                                    <p style={{ margin: "0", color: "#6b7280", fontSize: "14px" }}>USN: {req.usn}</p>
+                                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                                    {req.photoURL ? (
+                                        <img 
+                                            src={req.photoURL} 
+                                            alt="Student" 
+                                            style={{ 
+                                                width: 60, 
+                                                height: 60, 
+                                                objectFit: 'cover', 
+                                                borderRadius: '8px',
+                                                flexShrink: 0
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{ 
+                                            width: 60, 
+                                            height: 60, 
+                                            background: '#e5e7eb', 
+                                            borderRadius: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '10px',
+                                            color: '#6b7280',
+                                            flexShrink: 0
+                                        }}>
+                                            No photo
+                                        </div>
+                                    )}
+                                    <div style={{ flex: 1 }}>
+                                        <h4 style={{ margin: "0 0 4px 0", fontSize: "16px" }}>{req.studentName}</h4>
+                                        <p style={{ margin: "0", color: "#6b7280", fontSize: "14px" }}>USN: {req.usn}</p>
+                                    </div>
                                 </div>
                                 
                                 <div style={{ marginBottom: "12px", fontSize: "14px" }}>
@@ -200,23 +269,31 @@ function AdminDashboard({ filterProfileType = "all" }) {
                                     <div style={{ marginBottom: "4px" }}><strong>Pickup:</strong> {req.pickupPoint}</div>
                                     <div>
                                         <strong>Status:</strong> 
-                                        <span className={`badge ${req.status || 'pending'}`} style={{ marginLeft: "8px" }}>                                            {(req.status || 'pending').toUpperCase()}
+                                        <span className={`badge ${req.status || 'pending'}`} style={{ marginLeft: "8px" }}>
+                                            {(req.status || 'pending').toUpperCase()}
                                         </span>
                                     </div>
                                 </div>
                                 
                                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                                     <button 
+                                        className="btn-chip" 
+                                        onClick={() => handleViewDetails(req)}
+                                        style={{ flex: "1", minWidth: "100px", background: '#3b82f6', color: 'white' }}
+                                    >
+                                        View Details
+                                    </button>
+                                    <button 
                                         className="btn-chip btn-approve" 
                                         onClick={() => handleApproveClick(req.id, req.routeCol)}
-                                        style={{ flex: "1", minWidth: "120px" }}
+                                        style={{ flex: "1", minWidth: "100px" }}
                                     >
                                         <span className="dot" /> Approve
                                     </button>
                                     <button 
                                         className="btn-chip btn-reject" 
                                         onClick={() => handleReject(req.id, req.routeCol)}
-                                        style={{ flex: "1", minWidth: "120px" }}
+                                        style={{ flex: "1", minWidth: "100px" }}
                                     >
                                         <span className="dot" /> Reject
                                     </button>
@@ -227,10 +304,177 @@ function AdminDashboard({ filterProfileType = "all" }) {
                 </div>
             )}
             
+            {/* Request Details Modal */}
+            {showDetailsModal && selectedRequest && (
+                <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ 
+                        maxWidth: 600,
+                        width: window.innerWidth <= 768 ? "calc(100vw - 32px)" : "600px",
+                        margin: window.innerWidth <= 768 ? "16px" : "auto",
+                        maxHeight: "calc(100vh - 32px)",
+                        overflowY: "auto"
+                    }}>
+                        <div className="modal-header">
+                            <h3>Bus Pass Request Details</h3>
+                        </div>
+                        <div className="modal-body">
+                            {/* Student Photo */}
+                            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                                {selectedRequest.photoURL ? (
+                                    <img 
+                                        src={selectedRequest.photoURL} 
+                                        alt="Student" 
+                                        style={{ 
+                                            maxWidth: '200px',
+                                            maxHeight: '200px',
+                                            objectFit: 'cover',
+                                            borderRadius: '12px',
+                                            border: '3px solid #e5e7eb'
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{ 
+                                        width: '200px',
+                                        height: '200px',
+                                        background: '#e5e7eb',
+                                        borderRadius: '12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        margin: '0 auto',
+                                        color: '#6b7280'
+                                    }}>
+                                        No Photo Uploaded
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Student Details */}
+                            <div style={{ 
+                                background: '#f9fafb', 
+                                padding: '16px', 
+                                borderRadius: '8px',
+                                marginBottom: '16px'
+                            }}>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <strong style={{ color: '#6b7280' }}>Name:</strong>
+                                    <div style={{ fontSize: '18px', marginTop: '4px' }}>{selectedRequest.studentName}</div>
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <strong style={{ color: '#6b7280' }}>USN:</strong>
+                                    <div style={{ fontSize: '16px', marginTop: '4px' }}>{selectedRequest.usn}</div>
+                                </div>
+                                {selectedRequest.year && (
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <strong style={{ color: '#6b7280' }}>Year:</strong>
+                                        <div style={{ fontSize: '16px', marginTop: '4px' }}>{selectedRequest.year}</div>
+                                    </div>
+                                )}
+                                <div style={{ marginBottom: '12px' }}>
+                                    <strong style={{ color: '#6b7280' }}>Profile Type:</strong>
+                                    <div style={{ fontSize: '16px', marginTop: '4px', textTransform: 'capitalize' }}>
+                                        {selectedRequest.profileType || 'Student'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Route Details */}
+                            <div style={{ 
+                                background: '#f0f9ff', 
+                                padding: '16px', 
+                                borderRadius: '8px',
+                                marginBottom: '16px'
+                            }}>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <strong style={{ color: '#1e40af' }}>Route:</strong>
+                                    <div style={{ fontSize: '16px', marginTop: '4px' }}>
+                                        {selectedRequest.routeName || selectedRequest.routeCol}
+                                    </div>
+                                </div>
+                                <div>
+                                    <strong style={{ color: '#1e40af' }}>Pickup Point:</strong>
+                                    <div style={{ fontSize: '16px', marginTop: '4px' }}>{selectedRequest.pickupPoint}</div>
+                                </div>
+                            </div>
+
+                            {/* Notes */}
+                            {selectedRequest.notes && (
+                                <div style={{ 
+                                    background: '#fef3c7', 
+                                    padding: '16px', 
+                                    borderRadius: '8px',
+                                    marginBottom: '16px'
+                                }}>
+                                    <strong style={{ color: '#92400e' }}>Notes:</strong>
+                                    <div style={{ fontSize: '14px', marginTop: '4px', color: '#78350f' }}>
+                                        {selectedRequest.notes}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Payment Receipt */}
+                            {selectedRequest.paymentReceiptURL && (
+                                <div style={{ marginTop: 20 }}>
+                                    <strong style={{ display: 'block', marginBottom: '8px' }}>Payment Receipt:</strong>
+                                    <img 
+                                        src={selectedRequest.paymentReceiptURL} 
+                                        alt="Payment Receipt" 
+                                        style={{ 
+                                            maxWidth: '100%',
+                                            maxHeight: '300px',
+                                            objectFit: 'contain',
+                                            borderRadius: '8px',
+                                            border: '2px solid #e5e7eb'
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Request Date */}
+                            <div style={{ 
+                                marginTop: '16px', 
+                                paddingTop: '16px', 
+                                borderTop: '1px solid #e5e7eb',
+                                fontSize: '14px',
+                                color: '#6b7280'
+                            }}>
+                                <strong>Request Date:</strong> {selectedRequest.requestDate?.toDate?.().toLocaleString() || 'N/A'}
+                            </div>
+                        </div>
+                        <div className="modal-actions">
+                            <button 
+                                className="btn-chip btn-approve"
+                                onClick={() => {
+                                    setShowDetailsModal(false);
+                                    handleApproveClick(selectedRequest.id, selectedRequest.routeCol);
+                                }}
+                            >
+                                <span className="dot" /> Approve Request
+                            </button>
+                            <button 
+                                className="btn-chip btn-reject"
+                                onClick={() => {
+                                    setShowDetailsModal(false);
+                                    handleReject(selectedRequest.id, selectedRequest.routeCol);
+                                }}
+                            >
+                                <span className="dot" /> Reject Request
+                            </button>
+                            <button 
+                                className="btn-chip"
+                                onClick={() => setShowDetailsModal(false)}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             {/* Validity Period Modal */}
             {showValidityModal && currentRequest && (
-                <div className="modal-overlay">
-                    <div className="modal" style={{ 
+                <div className="modal-overlay" onClick={() => setShowValidityModal(false)}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ 
                         maxWidth: 500,
                         width: window.innerWidth <= 768 ? "calc(100vw - 32px)" : "500px",
                         margin: window.innerWidth <= 768 ? "16px" : "auto",
@@ -301,10 +545,5 @@ function AdminDashboard({ filterProfileType = "all" }) {
         </div>
     );
 }
-
-// Reusable styles (removed old inline button styles)
-const thStyle = { padding: "10px", border: "1px solid #ddd", textAlign: "left" };
-const tdStyle = { padding: "10px", border: "1px solid #ddd" };
-
 
 export default AdminDashboard;
