@@ -197,18 +197,77 @@ function App() {
   };
 
   if (loading || checkingPass) {
-    return (
-      <div style={{
-        fontFamily: 'Poppins, sans-serif',
-        minHeight: '100vh',
+  return (
+    <div
+      style={{
+        fontFamily: "Poppins, sans-serif",
+        minHeight: "100vh",
         display: "flex",
+        flexDirection: "column",
         justifyContent: "center",
-        alignItems: "center"
-      }}>
-        <p>Loading user session...</p>
+        alignItems: "center",
+        background: "linear-gradient(135deg, #f8fafc, #e2e8f0)",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: "100px",
+          height: "100px",
+        }}
+      >
+        {/* Logo Image */}
+        <img
+          src="/logo.png" // <-- change this to your logo path
+          alt="EventHub Logo"
+          style={{
+            width: "70px",
+            height: "70px",
+            borderRadius: "50%",
+            position: "absolute",
+            top: "15px",
+            left: "15px",
+            zIndex: 2,
+            animation: "logoPulse 2s infinite ease-in-out",
+          }}
+        />
+
+        {/* Rotating Ring */}
+        <div
+          style={{
+            width: "100px",
+            height: "100px",
+            border: "4px solid #d1d5db",
+            borderTop: "4px solid #3b82f6",
+            borderRadius: "50%",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            animation: "spin 1s linear infinite",
+          }}
+        />
       </div>
-    );
-  }
+
+      <p style={{ marginTop: "20px", fontSize: "18px", color: "#555" }}>
+        Loading BusPass
+      </p>
+
+      {/* Animation Keyframes */}
+      <style>
+        {`
+          @keyframes spin {
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes logoPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.9; }
+          }
+        `}
+      </style>
+    </div>
+  );
+}
+
   
   // Determine the default student path based on pass status
   const studentDefaultPath = hasApprovedPass ? "/epass" : "/apply";

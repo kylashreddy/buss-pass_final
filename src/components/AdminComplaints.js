@@ -22,7 +22,111 @@ function AdminComplaints() {
     return () => unsubscribe();
   }, []);
 
-  if (loading) return <p>Loading complaints...</p>;
+ if (loading)
+  return (
+    <div
+      style={{
+        fontFamily: "Poppins, sans-serif",
+        backgroundColor: "#f9fafb",
+        minHeight: "100vh",
+        padding: "40px",
+      }}
+    >
+      {/* Header */}
+      <h2
+        style={{
+          textAlign: "center",
+          marginBottom: "25px",
+          fontWeight: "600",
+          color: "#1e293b",
+        }}
+      >
+        📨 Complaints
+      </h2>
+
+      {/* Table Container */}
+      <div
+        style={{
+          backgroundColor: "#ffffff",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+          padding: "20px",
+          overflowX: "auto",
+        }}
+      >
+        {/* Table Header */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1.5fr 1.5fr 1fr 1fr",
+            gap: "15px",
+            borderBottom: "1px solid #f1f5f9",
+            paddingBottom: "10px",
+            marginBottom: "10px",
+          }}
+        >
+          {["Name", "Email", "Message", "Date", "Actions"].map((title, i) => (
+            <div
+              key={i}
+              style={{
+                height: "20px",
+                borderRadius: "6px",
+                background:
+                  "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
+                backgroundSize: "200% 100%",
+                animation: "skeletonLoading 1.6s infinite",
+                width: "60%",
+              }}
+            ></div>
+          ))}
+        </div>
+
+        {/* Table Rows */}
+        {[...Array(3)].map((_, rowIndex) => (
+          <div
+            key={rowIndex}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1.5fr 1.5fr 1fr 1fr",
+              gap: "15px",
+              marginBottom: "12px",
+              alignItems: "center",
+            }}
+          >
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: "20px",
+                  borderRadius: "6px",
+                  background:
+                    "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
+                  backgroundSize: "200% 100%",
+                  animation: "skeletonLoading 1.6s infinite",
+                }}
+              ></div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Loading text */}
+      <p style={{ textAlign: "center", color: "#64748b", marginTop: "20px" }}>
+        Loading complaints...
+      </p>
+
+      {/* Animation keyframes */}
+      <style>
+        {`
+          @keyframes skeletonLoading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        `}
+      </style>
+    </div>
+  );
+
 
   return (
     <div style={{ padding: "20px" }}>

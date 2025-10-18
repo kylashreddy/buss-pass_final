@@ -1,7 +1,7 @@
 // src/components/AdminDashboard.js
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore"; 
+import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, serverTimestamp, getDocs } from "firebase/firestore"; 
 
 // Helper function to safely get Firestore reference
 const getRequestRef = (routeCollection, requestId) => {
@@ -88,6 +88,43 @@ function AdminDashboard({ filterProfileType = "all" }) {
                 validityPeriod: validityDays,
             });
 
+            // If this request is for a teacher profile, ensure a users doc exists/updated
+            try {
+                const reqSnap = await getDoc(requestRef);
+                const reqData = reqSnap.exists() ? reqSnap.data() : null;
+                if (reqData && reqData.profileType === 'teacher') {
+                    const applicantUid = reqData.studentId || reqData.studentUID || reqData.userId || null;
+                    if (applicantUid) {
+                        const userRef = doc(db, 'users', applicantUid);
+                        // Try to preserve an existing email if the user doc already exists
+                        let emailToWrite = reqData.email || reqData.contactEmail || '';
+                        try {
+                            const existingUserSnap = await getDoc(userRef);
+                            if (existingUserSnap.exists()) {
+                                const eu = existingUserSnap.data();
+                                if (eu && eu.email) emailToWrite = eu.email;
+                            }
+                        } catch (readErr) {
+                            console.warn('Could not read existing user doc for email preservation:', readErr);
+                        }
+
+                        // Create or update the user document to ensure they appear in admin users (role: teacher)
+                        await setDoc(userRef, {
+                            email: emailToWrite,
+                            name: reqData.studentName || reqData.name || '',
+                            usn: reqData.usn || null,
+                            role: 'teacher',
+                            updatedAt: serverTimestamp(),
+                            createdAt: reqData.requestDate || serverTimestamp()
+                        }, { merge: true });
+                    } else {
+                        console.warn('Approved teacher request has no applicant UID; cannot create users doc. Request:', requestId);
+                    }
+                }
+            } catch (userErr) {
+                console.error('Failed to ensure user document for approved teacher:', userErr);
+            }
+
             alert(`✅ Request approved! Valid for ${validityDays} days until ${validUntil.toLocaleDateString()}`);
             setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
             setShowValidityModal(false);
@@ -137,6 +174,54 @@ function AdminDashboard({ filterProfileType = "all" }) {
                 fontSize: window.innerWidth <= 768 ? "18px" : "22px"
             }}>📋 Pending Bus Pass Requests</h2>
             <p style={{ marginTop: 0, textAlign: "center", color: "#6b7280" }}>Filter: {label}</p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                <button className="btn-chip" onClick={async () => {
+                    if (!window.confirm('Backfill approved teacher accounts into users collection? This will create/update user docs for approved teacher requests.')) return;
+                    try {
+                        const collectionsToScan = [
+                            "busPassRequests",
+                            "route-1","route-2","route-3","route-4","route-5","route-6",
+                            "route-7","route-8","route-9","route-10","route-11","route-12"
+                        ];
+                        let processed = 0;
+                        for (const col of collectionsToScan) {
+                            const q = query(collection(db, col), where('status', '==', 'approved'), where('profileType', '==', 'teacher'));
+                            const snap = await getDocs(q);
+                            for (const docSnap of snap.docs) {
+                                const data = docSnap.data();
+                                const uid = data.studentId || data.studentUID || data.userId || null;
+                                if (!uid) continue;
+                                const userRef = doc(db, 'users', uid);
+                                let emailToWrite = data.email || '';
+                                try {
+                                    const existing = await getDoc(userRef);
+                                    if (existing.exists()) {
+                                        const ex = existing.data();
+                                        if (ex && ex.email) emailToWrite = ex.email;
+                                    }
+                                } catch (re) {
+                                    console.warn('Could not read existing user during backfill:', re);
+                                }
+                                await setDoc(userRef, {
+                                    email: emailToWrite,
+                                    name: data.studentName || data.name || '',
+                                    usn: data.usn || null,
+                                    role: 'teacher',
+                                    updatedAt: serverTimestamp(),
+                                    createdAt: data.requestDate || serverTimestamp()
+                                }, { merge: true });
+                                processed++;
+                            }
+                        }
+                        alert(`Backfill complete. Processed ${processed} teacher(s).`);
+                    } catch (err) {
+                        console.error('Backfill failed:', err);
+                        alert('Backfill failed: ' + err.message);
+                    }
+                }} style={{ marginBottom: 8 }}>
+                    Backfill Approved Teachers
+                </button>
+            </div>
             {pendingRequests.length === 0 ? (
                 <p style={{ textAlign: "center" }}>No pending requests 🎉</p>
             ) : (

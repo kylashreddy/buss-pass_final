@@ -156,12 +156,163 @@ function AllData() {
     doc.save(`BusPassRequests_${filterType.toUpperCase()}.pdf`);
   };
 
-  if (loading)
-    return (
-      <p style={{ textAlign: "center", padding: "20px" }}>
-        Loading all data... ⏳
+ if (loading)
+  return (
+    <div
+      style={{
+        fontFamily: "Poppins, sans-serif",
+        padding: "30px",
+        backgroundColor: "#f9fafb",
+        minHeight: "100vh",
+      }}
+    >
+      <h2
+        style={{
+          textAlign: "center",
+          marginBottom: "20px",
+          fontWeight: "600",
+          color: "#1e293b",
+        }}
+      >
+        📊 Comprehensive Bus Pass Data
+      </h2>
+
+      {/* Filter bar skeleton */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "25px",
+          flexWrap: "wrap",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            width: "150px",
+            height: "35px",
+            borderRadius: "8px",
+            background:
+              "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
+            backgroundSize: "200% 100%",
+            animation: "skeletonLoading 1.6s infinite",
+          }}
+        ></div>
+        <div style={{ display: "flex", gap: "10px" }}>
+          {[...Array(2)].map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: "80px",
+                height: "35px",
+                borderRadius: "8px",
+                background:
+                  "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
+                backgroundSize: "200% 100%",
+                animation: "skeletonLoading 1.6s infinite",
+              }}
+            ></div>
+          ))}
+        </div>
+      </div>
+
+      {/* Multiple fake route sections */}
+      {[...Array(3)].map((_, sectionIndex) => (
+        <div
+          key={sectionIndex}
+          style={{
+            marginBottom: "35px",
+            borderRadius: "12px",
+            padding: "15px",
+            backgroundColor: "#ffffff",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+          }}
+        >
+          {/* Route Title */}
+          <div
+            style={{
+              height: "22px",
+              width: "180px",
+              marginBottom: "15px",
+              borderRadius: "6px",
+              background:
+                "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
+              backgroundSize: "200% 100%",
+              animation: "skeletonLoading 1.6s infinite",
+            }}
+          ></div>
+
+          {/* Table skeleton header */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(6, 1fr)",
+              gap: "10px",
+              marginBottom: "10px",
+            }}
+          >
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: "18px",
+                  borderRadius: "6px",
+                  background:
+                    "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
+                  backgroundSize: "200% 100%",
+                  animation: "skeletonLoading 1.6s infinite",
+                }}
+              ></div>
+            ))}
+          </div>
+
+          {/* Table rows */}
+          {[...Array(3)].map((_, rowIndex) => (
+            <div
+              key={rowIndex}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(6, 1fr)",
+                gap: "10px",
+                marginBottom: "10px",
+              }}
+            >
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: "20px",
+                    borderRadius: "6px",
+                    background:
+                      "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
+                    backgroundSize: "200% 100%",
+                    animation: "skeletonLoading 1.6s infinite",
+                  }}
+                ></div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ))}
+
+      {/* Text below */}
+      <p style={{ textAlign: "center", color: "#64748b", marginTop: "20px" }}>
+        Loading data...
       </p>
-    );
+
+      {/* Animation keyframes */}
+      <style>
+        {`
+          @keyframes skeletonLoading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        `}
+      </style>
+    </div>
+  );
+
 
   return (
     <div style={{ padding: "20px" }}>

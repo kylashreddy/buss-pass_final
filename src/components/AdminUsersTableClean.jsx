@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, getDocs, setDoc, getDoc } from 'firebase/firestore';
 import EditDialog from './EditDialog';
 
 const th = { padding: '10px', border: '1px solid #ddd', textAlign: 'left' };
@@ -88,10 +88,61 @@ export default function AdminUsersTable({ roleFilter = 'student' }) {
     }
   };
 
+  const onBackfillApprovedTeachers = async () => {
+    try {
+      if (!window.confirm('Backfill approved teacher accounts into users collection? This will create/update user docs for approved teacher requests.')) return;
+      const collectionsToScan = [
+        'busPassRequests',
+        'route-1','route-2','route-3','route-4','route-5','route-6',
+        'route-7','route-8','route-9','route-10','route-11','route-12'
+      ];
+      let processed = 0;
+      for (const col of collectionsToScan) {
+        const q = query(collection(db, col), where('status', '==', 'approved'), where('profileType', '==', 'teacher'));
+        const snap = await getDocs(q);
+        for (const docSnap of snap.docs) {
+          const data = docSnap.data();
+          const uid = data.studentId || data.studentUID || data.userId || null;
+          if (!uid) continue;
+          const userRef = doc(db, 'users', uid);
+          let emailToWrite = data.email || '';
+          try {
+            const existing = await getDoc(userRef);
+            if (existing.exists()) {
+              const ex = existing.data();
+              if (ex && ex.email) emailToWrite = ex.email;
+            }
+          } catch (re) {
+            console.warn('Could not read existing user during backfill:', re);
+          }
+          await setDoc(userRef, {
+            email: emailToWrite,
+            name: data.studentName || data.name || '',
+            usn: data.usn || null,
+            role: 'teacher',
+            updatedAt: serverTimestamp(),
+            createdAt: data.requestDate || serverTimestamp()
+          }, { merge: true });
+          processed++;
+        }
+      }
+      alert(`Backfill complete. Processed ${processed} teacher(s).`);
+    } catch (err) {
+      console.error('Backfill failed:', err);
+      alert('Backfill failed: ' + err.message);
+    }
+  };
+
   return (
     <div style={{ padding: 20 }}>
       <h2 style={{ textAlign: 'center', marginBottom: 6 }}>👥 {label}</h2>
       <p style={{ textAlign: 'center', color: '#6b7280', marginTop: 0 }}>Total: {users.length}</p>
+
+      {roleFilter === 'teacher' && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <button className="btn-chip" onClick={onBackfillApprovedTeachers}>Backfill Approved Teachers</button>
+        </div>
+      )}
 
       {users.length === 0 ? (
         <p>No {label.toLowerCase()} found.</p>
