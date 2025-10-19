@@ -1,0 +1,341 @@
+:root {
+  --brand: #18193F;
+  --accent: #FFD700;
+  --bg: #F9FAFB;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+}
+
+/* Subtle animated background on page-content */
+.page-content {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(24,25,63,0.06), transparent 60%),
+    radial-gradient(1000px 500px at 110% 10%, rgba(255,215,0,0.08), transparent 60%),
+    #f9f9f9;
+  animation: bgFloat 18s ease-in-out infinite alternate;
+}
+
+@keyframes bgFloat {
+  0%   { background-position: 0px 0px, 0px 0px, 0 0; }
+  100% { background-position: 12px 10px, -10px 6px, 0 0; }
+}
+
+/* Ensure normal system cursor */
+@media (pointer: fine) {
+  html, body {
+    cursor: auto;
+  }
+}
+
+.animated-cursor-dot,
+.animated-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translate3d(-100px, -100px, 0);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.animated-cursor-dot {
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border: 2px solid var(--brand);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+  mix-blend-mode: difference;
+}
+
+.animated-cursor-ring {
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(24,25,63,0.12);
+  opacity: 0.65;
+  transition: transform 0.08s ease-out, width 0.25s ease, height 0.25s ease, opacity 0.25s ease, background 0.25s ease;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .page-content { animation: none; }
+  .animated-cursor-dot,
+  .animated-cursor-ring { display: none; }
+}
+
+/* Tracking placeholder visuals */
+.track-card { width: 100%; }
+.track-map {
+  position: relative;
+  height: 120px;
+  background: linear-gradient(180deg, #f9fafb, #f3f4f6);
+  border: 1px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* E‑Pass styles */
+.epass-card { position: relative; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.10); overflow: hidden; }
+/* Reduced motion/effects for a cleaner medium look */
+.epass-card:hover { box-shadow: 0 10px 24px rgba(0,0,0,0.12); }
+/* Decorative ::before glows removed to keep a simpler look */
+.epass-header { position: relative; background: linear-gradient(90deg, #18193F 0%, #23244a 100%); color: #fff; padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; align-items: center; }
+.epass-brand { display: flex; align-items: center; gap: 10px; }
+.epass-logo { height: 24px; width: 24px; border-radius: 6px; background: #fff; padding: 2px; }
+.epass-brand-title { font-weight: 800; letter-spacing: 1px; }
+.epass-brand-sub { font-size: 11px; opacity: .9; }
+.epass-title { position: absolute; left: 50%; transform: translateX(-50%); top: 50%; translate: 0 -50%; font-size: 11px; letter-spacing: 1.1px; font-weight: 700; opacity: .9; text-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+.epass-chip { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 28px; height: 18px; border-radius: 6px; background: linear-gradient(135deg, rgba(255,255,255,.25), rgba(255,215,0,.35)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
+
+.epass-body { display: grid; grid-template-columns: 1.2fr .9fr; gap: 10px; padding: 12px 12px 10px 12px; }
+@media (max-width: 520px) { .epass-body { grid-template-columns: 1fr; } }
+
+.epass-left { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: start; }
+.epass-photo { width: 68px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid #e5e7eb; background: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 12px; }
+
+.epass-fields { display: grid; gap: 6px; }
+/* Support both epass-field (legacy) and epass-kv (current) */
+.epass-field, .epass-kv { display: grid; grid-template-columns: 16px 72px 1fr; gap: 6px; align-items: center; font-size: 12px; }
+.epass-field .lab, .epass-kv .lab { color: #64748b; }
+.epass-field .val, .epass-kv .val { font-weight: 600; color: #0f172a; }
+.epass-field .ico, .epass-kv .ico { display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; color: #334155; }
+
+.epass-right { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; min-height: 180px; }
+.epass-qr { width: 110px; height: 110px; border-radius: 6px; background:
+  repeating-linear-gradient(0deg, #0f172a 0 6px, transparent 6px 12px),
+  repeating-linear-gradient(90deg, #0f172a 0 6px, transparent 6px 12px);
+  background-blend-mode: multiply; background-color: #fff; box-shadow: inset 0 0 0 1px #e5e7eb; display: flex; align-items: center; justify-content: center; }
+.epass-qr img { border-radius: 4px !important; }
+.epass-valid { font-size: 12px; color: #374151; font-weight: 600; text-align: center; }
+.epass-qr-container { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.epass-validity-section { margin-top: 12px; }
+
+/* Responsive adjustments for QR code */
+@media (max-width: 520px) {
+  .epass-right { min-height: 160px; gap: 10px; }
+  .epass-qr { width: 100px; height: 100px; }
+  .epass-valid { font-size: 11px; }
+}
+.epass-sign { display: grid; justify-items: center; gap: 2px; }
+.epass-sign img { height: 22px; }
+.epass-sign span { font-size: 10px; color: #6b7280; }
+
+.epass-status { position: absolute; top: 10px; right: 12px; padding: 4px 10px; font-size: 12px; color: #fff; font-weight: 700; border-radius: 999px; box-shadow: 0 8px 18px rgba(0,0,0,0.12); }
+.epass-status.approved { background: #22c55e; }
+.epass-status.pending { background: #f59e0b; }
+.epass-status.rejected { background: #ef4444; }
+
+/* Print-friendly pass */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body, .page-content { background: #fff !important; animation: none !important; }
+  nav, .navbar, .hero-glow, .hero-content, .features-grid, .route-demo, .auth-container, .hero-ctas { display: none !important; }
+  .epass-card { box-shadow: none !important; border: 1px solid #111827; }
+}
+
+.track-road {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  right: 10px;
+  height: 6px;
+  background: linear-gradient(90deg, #d1d5db 25%, #e5e7eb 25%, #e5e7eb 50%, #d1d5db 50%, #d1d5db 75%, #e5e7eb 75%, #e5e7eb);
+  background-size: 24px 6px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+.track-stop {
+  position: absolute;
+  top: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  background: var(--brand);
+  border-radius: 999px;
+  opacity: 0.7;
+}
+.track-bus {
+  position: absolute;
+  top: calc(50% - 7px);
+  left: 12px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 2px solid #111827;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  animation: busMove 2.2s ease-in-out infinite alternate;
+}
+@keyframes busMove {
+  from { left: 12px; }
+  to   { left: calc(100% - 26px); }
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Make media scale within containers */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Apply E‑Pass form utilities */
+.form-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 760px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+.field select, .field input[type="file"], .field textarea { width: 100%; }
+
+/* Mobile form improvements */
+@media (max-width: 768px) {
+  .form-grid { gap: 12px; }
+  .field select, .field input[type="file"], .field textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px;
+  }
+  .label-row { font-size: 14px; margin-bottom: 4px; }
+  .help-text { font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  .form-grid { gap: 10px; }
+  .field select, .field input[type="file"], .field textarea {
+    padding: 10px;
+    font-size: 16px;
+  }
+}
+.label-row { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+.icon-badge-sm { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: rgba(0,0,0,0.05); color: #111827; }
+.help-text { font-size: 12px; color: #6b7280; margin-top: 6px; }
+.form-actions { margin-top: 14px; }
+
+/* Home page styles */
+.home-hero {
+  position: relative;
+  padding: 28px 16px 48px;
+}
+.hero-content {
+  max-width: 980px;
+  margin: 24px auto 40px;
+  text-align: center;
+}
+.hero-badge {
+  display: inline-block;
+  background: rgba(24,25,63,0.08);
+  color: #18193F;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.hero-title {
+  font-size: clamp(28px, 4.5vw, 44px);
+  line-height: 1.1;
+  margin: 12px 0 10px;
+  color: #0f172a;
+}
+.hero-subtitle {
+  color: #374151;
+  max-width: 720px;
+  margin: 0 auto 16px;
+}
+.hero-ctas { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 16px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 1px solid transparent; transition: transform .15s ease, background .2s ease, color .2s ease, border .2s ease; }
+.btn-primary { background: #18193F; color: #fff; }
+.btn-primary:hover { transform: translateY(-2px); background: #23244a; }
+.btn-secondary { background: #FFD700; color: #18193F; }
+.btn-secondary:hover { transform: translateY(-2px); filter: brightness(0.95); }
+.btn-outline { background: #fff; color: #18193F; border-color: #e5e7eb; }
+.btn-outline:hover { transform: translateY(-2px); border-color: #cbd5e1; }
+
+/* Decorative glows */
+.hero-glow { position: absolute; filter: blur(60px); opacity: .4; pointer-events: none; }
+.glow-a { width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,215,0,.35), transparent 60%); top: -40px; left: -20px; animation: floatA 10s ease-in-out infinite; }
+.glow-b { width: 360px; height: 360px; background: radial-gradient(circle, rgba(24,25,63,.35), transparent 60%); bottom: -60px; right: -20px; animation: floatB 12s ease-in-out infinite; }
+@keyframes floatA { 0%{ transform: translate(0,0);} 50%{ transform: translate(10px,12px);} 100%{ transform: translate(0,0);} }
+@keyframes floatB { 0%{ transform: translate(0,0);} 50%{ transform: translate(-10px,8px);} 100%{ transform: translate(0,0);} }
+
+/* Features */
+.features-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.feature-card { background: #fff; border: 1px solid #eee; border-radius: 16px; padding: 18px; box-shadow: 0 10px 24px rgba(0,0,0,0.08); text-align: left; }
+.feature-card h3 { margin: 8px 0 6px; }
+.feature-card p { color: #374151; margin: 0; }
+
+/* Animated feature icons */
+.feature-icon-badge { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; margin-bottom: 6px; overflow: hidden; }
+.feature-icon-badge::before { content: ""; position: absolute; inset: -2px; border-radius: inherit; background: conic-gradient(from 0deg, rgba(255,215,0,.35), rgba(24,25,63,.25), transparent 70%); filter: blur(8px); animation: spin 8s linear infinite; opacity: .6; }
+.feature-icon-badge svg { position: relative; z-index: 1; }
+/* Color themes */
+.icon-tracking { background: rgba(59,130,246,0.10); color: #2563eb; }
+.icon-routes { background: rgba(34,197,94,0.12); color: #16a34a; }
+.icon-epass { background: rgba(234,179,8,0.14); color: #ca8a04; }
+.icon-alerts { background: rgba(244,63,94,0.12); color: #e11d48; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .feature-icon-badge::before { animation: none; }
+}
+
+/* Route demo */
+.route-demo { max-width: 1100px; margin: 26px auto 0; padding: 0 8px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 20px; }
+@media (max-width: 900px) { .route-demo { grid-template-columns: 1fr; } }
+.route-card { background: #fff; border: 1px solid #eee; border-radius: 16px; padding: 18px; box-shadow: 0 10px 24px rgba(0,0,0,0.08); }
+.route-head { display:flex; align-items:center; justify-content:space-between; margin-bottom: 8px; }
+.route-map { position: relative; height: 140px; background: linear-gradient(180deg, #f9fafb, #f3f4f6); border: 1px solid #eee; border-radius: 12px; overflow: hidden; }
+.route-line { position:absolute; top:50%; left: 10px; right: 10px; height: 6px; background: linear-gradient(90deg, #d1d5db 25%, #e5e7eb 25%, #e5e7eb 50%, #d1d5db 50%, #d1d5db 75%, #e5e7eb 75%, #e5e7eb); background-size: 24px 6px; border-radius:999px; transform: translateY(-50%); }
+.route-stop { position:absolute; top: calc(50% - 4px); width: 8px; height: 8px; background: var(--brand); border-radius:999px; opacity:.7; }
+.route-bus { position:absolute; top: calc(50% - 7px); left: 12px; width: 14px; height: 14px; border-radius: 999px; background: var(--accent); border: 2px solid #111827; box-shadow: 0 4px 10px rgba(0,0,0,0.15); animation: busMove 2.2s ease-in-out infinite alternate; }
+.route-copy { display:flex; flex-direction:column; justify-content:center; }
+
+/* Reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+  .hero-glow { display:none; }
+}
+
+/* Ticket-style E‑Pass (rectangle) */
+.epass-ticket { padding: 0; border-radius: 8px; }
+.ticket-head { background: #fff; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: center; align-items: center; }
+.ticket-brand { display: flex; align-items: center; gap: 10px; color: #0f172a; }
+.ticket-brand-text .title { font-weight: 900; font-size: 18px; letter-spacing: 1px; line-height: 1; }
+.ticket-brand-text .sub { font-size: 11px; color: #6b7280; line-height: 1.2; }
+.ticket-logo { width: 28px; height: 28px; border-radius: 6px; background: #fff; }
+.ticket-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; max-width: 65%; }
+.ticket-name { font-weight: 800; font-size: 16px; color: #0f172a; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ticket-status { padding: 4px 10px; font-size: 12px; font-weight: 800; color: #fff; border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+.ticket-status.approved { background: #22c55e; }
+.ticket-status.pending { background: #f59e0b; }
+.ticket-status.rejected { background: #ef4444; }
+@media (max-width: 360px) { .ticket-name { font-size: 14px; } }
+.ticket-profile { display: flex; align-items: center; gap: 12px; padding: 12px; }
+.ticket-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280; display: flex; align-items: center; justify-content: center; }
+.ticket-profile-info .name { font-weight: 700; font-size: 16px; color: #0f172a; }
+.ticket-profile-info .muted { font-size: 12px; color: #6b7280; }
+.ticket-divider { height: 1px; background: #e5e7eb; margin: 0 12px; }
+.ticket-body { padding: 12px; }
+.ticket-section-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+.ticket-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ticket-list li { display: flex; align-items: center; gap: 8px; color: #111827; font-size: 14px; }
+.ticket-time { margin: 10px 0; font-size: 12px; color: #374151; }
+.ticket-qr-wrap { display: flex; justify-content: center; padding: 8px 0 12px; }
+.ticket-qr { width: 128px; height: 128px; border-radius: 8px; background:
+  repeating-linear-gradient(0deg, #0f172a 0 6px, transparent 6px 12px),
+  repeating-linear-gradient(90deg, #0f172a 0 6px, transparent 6px 12px);
+  background-blend-mode: multiply; background-color: #fff; box-shadow: inset 0 0 0 1px #e5e7eb; display: flex; align-items: center; justify-content: center; }
+
+@media (max-width: 420px) {
+  .ticket-qr { width: 112px; height: 112px; }
+  .ticket-profile { padding: 10px; gap: 10px; }
+  .ticket-body { padding: 10px; }
+  .ticket-section-title { font-size: 14px; }
+}
