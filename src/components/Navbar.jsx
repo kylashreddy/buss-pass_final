@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 // Assuming NotificationsBell is accessible via an alias or relative path from the components root.
 import NotificationsBell from './NotificationsBell';
 
-function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
+function Navbar({ user, userRole, handleLogout, hasApprovedPass, deferredPrompt, triggerInstall }) {
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -120,6 +120,12 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {!isMobile && (
             <>
+              {deferredPrompt && (
+                <span style={{ display: "flex", alignItems: "center", cursor: "pointer", color: "#fff", fontSize: 14, fontWeight: 500, marginRight: 8 }} onClick={triggerInstall} title="Add to Home Screen">
+                  <img src="/logo.png" alt="Add to Home Screen" style={{ width: 20, height: 20, borderRadius: "4px", background: "#fff", padding: "2px" }} />
+                  Add To Home Screen
+                </span>
+              )}
               <span style={iconStyle} title="Twitter"><i className="fab fa-twitter"></i></span>
               <span style={iconStyle} title="Facebook"><i className="fab fa-facebook-f"></i></span>
               <span style={iconStyle} title="Instagram"><i className="fab fa-instagram"></i></span>
@@ -157,6 +163,13 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass }) {
       {isMobile && menuOpen && (
         <div ref={menuRef} style={mobileMenuStyle}>
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 4 }}>
+            {deferredPrompt && (
+              <li>
+                <button onClick={() => { triggerInstall(); handleLinkClick(); }} style={{ ...mobileLinkButtonStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <img src="/logo.png" alt="Add to Home Screen" style={{ width: 16, height: 16, borderRadius: "2px", background: "#fff", padding: "1px" }} /> Add To Home Screen
+                </button>
+              </li>
+            )}
             {user ? (userRole === "admin" ? adminLinks : studentLinks) : guestLinks}
             {user && (
               <li>

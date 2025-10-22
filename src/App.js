@@ -82,7 +82,7 @@ const AuthPage = ({ showRegister, setShowRegister }) => (
 function App() {
   // PWA install prompt handling
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
 
   useEffect(() => {
     const handler = (e) => {
@@ -90,12 +90,6 @@ function App() {
       e.preventDefault();
       // Save the event for later use
       setDeferredPrompt(e);
-
-      // Show banner only for new users (not seen before)
-      const seen = localStorage.getItem('seenInstallPrompt');
-      if (!seen) {
-        setShowInstallBanner(true);
-      }
     };
 
     window.addEventListener('beforeinstallprompt', handler);
@@ -112,17 +106,11 @@ function App() {
       const choiceResult = await deferredPrompt.userChoice;
       // store that user saw it so we don't nag them
       localStorage.setItem('seenInstallPrompt', '1');
-      setShowInstallBanner(false);
       setDeferredPrompt(null);
       console.log('User response to the install prompt:', choiceResult);
     } catch (err) {
       console.error('Install prompt error', err);
     }
-  };
-
-  const dismissInstallBanner = () => {
-    localStorage.setItem('seenInstallPrompt', '1');
-    setShowInstallBanner(false);
   };
 
   const [user, setUser] = useState(null);
@@ -320,38 +308,9 @@ function App() {
 
   return (
     <Router>
-      <Navbar user={user} userRole={userRole} handleLogout={handleLogout} hasApprovedPass={hasApprovedPass} />
+      <Navbar user={user} userRole={userRole} handleLogout={handleLogout} hasApprovedPass={hasApprovedPass} deferredPrompt={deferredPrompt} triggerInstall={triggerInstall} />
 
-      {/* PWA Install Banner */}
-      {showInstallBanner && (
-        <div style={{
-          position: 'fixed',
-          left: '12px',
-          right: '12px',
-          bottom: '18px',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          background: 'linear-gradient(90deg, #ffffff, #f8fafc)',
-          boxShadow: '0 6px 18px rgba(2,6,23,0.08)',
-          borderRadius: '10px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src="/logo192.png" alt="CampusBus" style={{ width: 44, height: 44, borderRadius: 8 }} />
-            <div>
-              <div style={{ fontWeight: 700 }}>Add CampusBus to your home screen</div>
-              <div style={{ fontSize: 12, color: '#444' }}>Quick access to your bus pass and tracking.</div>
-            </div>
-          </div>
 
-          <div style={{ display: 'flex', gap: 8, marginLeft: 12 }}>
-            <button onClick={triggerInstall} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Add</button>
-            <button onClick={dismissInstallBanner} style={{ background: 'transparent', color: '#333', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Dismiss</button>
-          </div>
-        </div>
-      )}
 
       {user ? (
         <>
