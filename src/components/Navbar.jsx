@@ -165,7 +165,7 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass, deferredPrompt,
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 4 }}>
             {deferredPrompt && (
               <li>
-                <button onClick={() => { triggerInstall(); handleLinkClick(); }} style={{ ...mobileLinkButtonStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => { triggerInstall(); handleLinkClick(); }} style={{ ...mobileLinkButtonStyle, display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none' }}>
                   <img src="/logo.png" alt="Add to Home Screen" style={{ width: 16, height: 16, borderRadius: "2px", background: "#fff", padding: "1px" }} /> Add To Home Screen
                 </button>
               </li>
