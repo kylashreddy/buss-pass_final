@@ -7,7 +7,11 @@ import NotificationsBell from './NotificationsBell';
 function Navbar({ user, userRole, handleLogout, hasApprovedPass, deferredPrompt, triggerInstall }) {
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const menuRef = useRef(null);
+
+  // Detect iOS devices
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -120,8 +124,8 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass, deferredPrompt,
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {!isMobile && (
             <>
-              {deferredPrompt && (
-                <span style={{ display: "flex", alignItems: "center", cursor: "pointer", color: "#fff", fontSize: 14, fontWeight: 500, marginRight: 8 }} onClick={triggerInstall} title="Add to Home Screen">
+              {(deferredPrompt || isIOS) && (
+                <span style={{ display: "flex", alignItems: "center", cursor: "pointer", color: "#fff", fontSize: 14, fontWeight: 500, marginRight: 8 }} onClick={isIOS ? () => setShowIOSInstructions(true) : triggerInstall} title="Add to Home Screen">
                   <img src="/logo.png" alt="Add to Home Screen" style={{ width: 20, height: 20, borderRadius: "4px", background: "#fff", padding: "2px" }} />
                   Add To Home Screen
                 </span>
@@ -163,9 +167,9 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass, deferredPrompt,
       {isMobile && menuOpen && (
         <div ref={menuRef} style={mobileMenuStyle}>
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 4 }}>
-            {deferredPrompt && (
+            {(deferredPrompt || isIOS) && (
               <li>
-                <button onClick={() => { triggerInstall(); handleLinkClick(); }} style={{ ...mobileLinkButtonStyle, display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none' }}>
+                <button onClick={() => { (isIOS ? setShowIOSInstructions(true) : triggerInstall()); handleLinkClick(); }} style={{ ...mobileLinkButtonStyle, display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none' }}>
                   <img src="/logo.png" alt="Add to Home Screen" style={{ width: 16, height: 16, borderRadius: "2px", background: "#fff", padding: "1px" }} /> Add To Home Screen
                 </button>
               </li>
@@ -179,6 +183,55 @@ function Navbar({ user, userRole, handleLogout, hasApprovedPass, deferredPrompt,
               </li>
             )}
           </ul>
+        </div>
+      )}
+
+      {/* iOS Instructions Modal */}
+      {showIOSInstructions && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }} onClick={() => setShowIOSInstructions(false)}>
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '20px',
+            borderRadius: '8px',
+            maxWidth: '300px',
+            textAlign: 'center'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, color: '#18193F' }}>Add to Home Screen</h3>
+            <p style={{ fontSize: '14px', lineHeight: '1.5' }}>
+              To add CampusBus to your home screen:
+              <br /><br />
+              1. Tap the share button <strong>⬆️</strong>
+              <br />
+              2. Scroll down and tap "Add to Home Screen"
+              <br />
+              3. Tap "Add"
+            </p>
+            <button
+              onClick={() => setShowIOSInstructions(false)}
+              style={{
+                backgroundColor: '#18193F',
+                color: '#fff',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                marginTop: '10px'
+              }}
+            >
+              Got it!
+            </button>
+          </div>
         </div>
       )}
     </nav>
