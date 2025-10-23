@@ -57,7 +57,7 @@ const AuthPage = ({ showRegister, setShowRegister }) => (
         <img src="/logo.png" alt="CampusBus Logo" style={{ width: "50px", height: "50px", marginRight: "12px", borderRadius: "50%" }} />
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>CampusBus Portal</h1>
-          <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>Student • Teacher • Admin</p>
+          <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>Student • Teacher</p>
         </div>
       </div>
 
