@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react"; // 👈 Imp
 import { Link } from "react-router-dom";
 import { db } from "../firebase";
 import { collection, onSnapshot, query, where, orderBy, doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { debugNotifications, testUpdateNotification } from '../utils/notificationDebug';
+// debug helpers intentionally omitted in production builds
 
 function NotificationsBell({ user, userRole, isMobile }) {
   const [open, setOpen] = useState(false);

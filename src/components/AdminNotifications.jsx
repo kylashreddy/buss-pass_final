@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 
 function AdminNotifications() {
   const [title, setTitle] = useState("");
@@ -44,13 +44,7 @@ function AdminNotifications() {
     }
   };
 
-  const remove = async (id) => {
-    try {
-      await deleteDoc(doc(db, "notifications", id));
-    } catch (e) {
-      console.error(e);
-    }
-  };
+
 
   return (
     <div className="admin-notif" style={{ padding: 20 }}>

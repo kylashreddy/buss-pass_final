@@ -25,8 +25,21 @@ function StudentBusPassView() {
           return;
         }
 
+        // Load cached pass immediately (if available) to show page instantly
+        const cacheKey = `busPass_${user.uid}`;
+        const cachedPass = localStorage.getItem(cacheKey);
+        if (cachedPass) {
+          try {
+            const cached = JSON.parse(cachedPass);
+            setBusPass(cached);
+            setLoading(false); // Show UI immediately with cached data
+          } catch (e) {
+            console.warn('Failed to parse cached bus pass:', e);
+          }
+        }
+
         let allRequests = [];
-        
+
         // Combined list of collections to search
         const collectionsToSearch = [
             "busPassRequests",
@@ -34,22 +47,33 @@ function StudentBusPassView() {
             "route-7","route-8","route-9","route-10","route-11","route-12"
         ];
 
-        for (const colId of collectionsToSearch) {
+        // Run queries in parallel instead of sequentially to reduce wait time
+        const queryPromises = collectionsToSearch.map((colId) => {
           const q = query(
             collection(db, colId),
             where("studentId", "==", user.uid)
           );
-          
-          const querySnapshot = await getDocs(q);
-
-          querySnapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            allRequests.push({ 
-                id: docSnap.id, 
-                data: { routeName: data.routeName || colId, ...data }
+          return getDocs(q)
+            .then((querySnapshot) => {
+              const results = [];
+              querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                results.push({
+                  id: docSnap.id,
+                  data: { routeName: data.routeName || colId, ...data }
+                });
+              });
+              return results;
+            })
+            .catch((err) => {
+              // Log and continue; failure on one collection shouldn't block others
+              console.warn(`Failed to query ${colId}:`, err);
+              return [];
             });
-          });
-        }
+        });
+
+        const results = await Promise.all(queryPromises);
+        allRequests = results.flat();
         
         let latestPass = null;
         
@@ -65,6 +89,12 @@ function StudentBusPassView() {
         }
 
         setBusPass(latestPass);
+        setLoading(false); // Mark data as loaded
+        
+        // Cache the latest pass for next load
+        if (latestPass) {
+          localStorage.setItem(cacheKey, JSON.stringify(latestPass));
+        }
         
         // Generate QR code for approved passes
         if (latestPass && latestPass.status === 'approved') {
@@ -123,8 +153,9 @@ function StudentBusPassView() {
       } catch (error) {
         console.error("Error fetching bus pass:", error);
         setBusPass(null);
+        setLoading(false); // Ensure loading is false even on error
       } finally {
-        setLoading(false);
+        // setLoading is already set to false above or earlier via cache
       }
     };
 

@@ -30,10 +30,17 @@ function LoginForm({ onSwitchToRegister }) {
       if (userDocSnap.exists()) {
         profile = userDocSnap.data();
         role = profile.role;
+        
+        // Cache user profile to localStorage so App.js can use it immediately
+        try {
+          localStorage.setItem(`userProfile_${user.uid}`, JSON.stringify(profile));
+        } catch (e) {
+          console.warn('Failed to cache user profile:', e);
+        }
       }
 
-      // Log successful login (guarded per session)
-      await logLoginEvent(db, user, profile);
+      // Log successful login (fire-and-forget so navigation isn't blocked by logging)
+      logLoginEvent(db, user, profile).catch((e) => console.warn('logLoginEvent failed:', e));
 
       // Route by role; allow teacher to sign in and land on Home
       if (role === "student") {

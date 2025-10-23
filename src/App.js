@@ -117,18 +117,15 @@ function App() {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasApprovedPass, setHasApprovedPass] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
-  const [checkingPass, setCheckingPass] = useState(true); 
+  const [showRegister, setShowRegister] = useState(false); 
 
   // --- PASS CHECK LOGIC (Moved outside useEffect for readability) ---
   const checkApprovedPass = async (uid) => {
     if (!uid) {
         setHasApprovedPass(false);
-        setCheckingPass(false);
         return;
     }
     
-    setCheckingPass(true);
     const routeCollections = [
       "busPassRequests", 
       ...Array.from({ length: 12 }, (_, i) => `route-${i + 1}`)
@@ -163,7 +160,6 @@ function App() {
     }
 
     setHasApprovedPass(isAnyValid);
-    setCheckingPass(false);
   };
   // -------------------------
 
@@ -171,7 +167,6 @@ function App() {
   useEffect(() => {
     document.body.style.backgroundColor = "#F9FAFB";
     document.documentElement.style.backgroundColor = "#F9FAFB";
-    setCheckingPass(true);
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
@@ -179,43 +174,59 @@ function App() {
         setUser(currentUser);
 
         try {
-          const userDocRef = doc(db, "users", currentUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          // Try to use cached profile first (set during login for instant load)
+          let profile = null;
+          const cacheKey = `userProfile_${currentUser.uid}`;
+          const cachedProfile = localStorage.getItem(cacheKey);
+          
+          if (cachedProfile) {
+            try {
+              profile = JSON.parse(cachedProfile);
+            } catch (e) {
+              console.warn('Failed to parse cached profile:', e);
+            }
+          }
+          
+          // If no cache, fetch from Firestore (fallback for page refresh or other auth changes)
+          if (!profile) {
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+              profile = userDocSnap.data();
+            }
+          }
 
-          if (userDocSnap.exists()) {
-            const role = userDocSnap.data().role || "student";
+          if (profile) {
+            const role = profile.role || "student";
             setUserRole(role);
             
-            const profile = userDocSnap.data();
-            await logLoginEvent(db, currentUser, profile);
+            // Fire-and-forget: don't await logging, it's non-critical
+            logLoginEvent(db, currentUser, profile).catch((e) => console.warn('logLoginEvent failed:', e));
 
             if (role === "student") {
-              await checkApprovedPass(currentUser.uid);
+              // Fire-and-forget: check approved pass in background, don't block initial render
+              checkApprovedPass(currentUser.uid).catch((e) => console.error("checkApprovedPass failed:", e));
             } else {
               setHasApprovedPass(false);
-              setCheckingPass(false);
             }
           } else {
             // 🛑 FIX: New user authenticated but no Firestore document found (must be new registration flow)
             console.log("New user detected (no Firestore profile). Redirecting to application.");
             setUserRole("student"); // Assume student role to route them correctly
             setHasApprovedPass(false); // Definitely no pass yet
-            setCheckingPass(false); // Stop loading sequence
           }
 
         } catch (err) {
           console.error("Error fetching user doc/pass:", err);
           setUserRole(null);
           setHasApprovedPass(false);
-          setCheckingPass(false);
         }
       } else {
         setUser(null);
         setUserRole(null);
         setHasApprovedPass(false);
-        setCheckingPass(false);
       }
-      setLoading(false);
+      setLoading(false); // Always set loading to false immediately after user role is determined
     });
 
     return () => unsubscribe();
@@ -229,7 +240,7 @@ function App() {
     }
   };
 
-  if (loading || checkingPass) {
+  if (loading) {
   return (
     <div
       style={{
