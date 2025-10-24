@@ -30,29 +30,34 @@ function AllData() {
   const [filterType, setFilterType] = useState("all");
 
   useEffect(() => {
-    const fetchAllRequests = async () => {
-      setLoading(true);
-      try {
-        let requests = [];
-        for (const colId of COLLECTIONS_TO_FETCH) {
-          const snapshot = await getDocs(collection(db, colId));
-          snapshot.docs.forEach((doc) => {
-            requests.push({
-              id: doc.id,
-              sourceCollection: colId,
-              ...doc.data(),
-            });
-          });
-        }
-        setAllRequests(requests);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAllRequests();
-  }, []);
+  const fetchAllRequests = async () => {
+    setLoading(true);
+    try {
+      // ✅ Fetch all collections in parallel
+      const snapshots = await Promise.all(
+        COLLECTIONS_TO_FETCH.map((colId) => getDocs(collection(db, colId)))
+      );
+
+      // ✅ Merge all documents
+      const allData = snapshots.flatMap((snapshot, i) =>
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          sourceCollection: COLLECTIONS_TO_FETCH[i],
+          ...doc.data(),
+        }))
+      );
+
+      setAllRequests(allData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAllRequests();
+}, []);
+
 
   // ✅ Group by route
   const filteredAndGroupedData = useMemo(() => {

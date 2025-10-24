@@ -30,19 +30,19 @@ function LoginForm({ onSwitchToRegister }) {
       if (userDocSnap.exists()) {
         profile = userDocSnap.data();
         role = profile.role;
-        
-        // Cache user profile to localStorage so App.js can use it immediately
+
+        // Cache user profile to localStorage
         try {
           localStorage.setItem(`userProfile_${user.uid}`, JSON.stringify(profile));
         } catch (e) {
-          console.warn('Failed to cache user profile:', e);
+          console.warn("Failed to cache user profile:", e);
         }
       }
 
-      // Log successful login (fire-and-forget so navigation isn't blocked by logging)
-      logLoginEvent(db, user, profile).catch((e) => console.warn('logLoginEvent failed:', e));
+      // Log login event
+      logLoginEvent(db, user, profile).catch((e) => console.warn("logLoginEvent failed:", e));
 
-      // Route by role; allow teacher to sign in and land on Home
+      // Route by role
       if (role === "student") {
         navigate("/epass");
       } else if (role === "teacher") {
@@ -56,7 +56,16 @@ function LoginForm({ onSwitchToRegister }) {
       setEmail("");
       setPassword("");
     } catch (err) {
-      setError(err.message);
+      // ✅ Friendly error messages
+      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
+        setError("invalid-credentials");
+      } else if (err.code === "auth/user-not-found") {
+        setError("user-not-found");
+      } else if (err.code === "auth/invalid-email") {
+        setError("invalid-email");
+      } else {
+        setError("unknown-error");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -69,10 +78,10 @@ function LoginForm({ onSwitchToRegister }) {
       transition={{ duration: 0.6 }}
       whileHover={{ y: -2 }}
       style={{
-        backgroundColor: "rgba(255, 255, 255, 0.85)", // transparent glass look
+        backgroundColor: "rgba(255, 255, 255, 0.85)",
         borderRadius: "16px",
         padding: "32px",
-        backdropFilter: "blur(10px)", // glass effect
+        backdropFilter: "blur(10px)",
         boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
         width: "100%",
         maxWidth: "420px",
@@ -81,6 +90,7 @@ function LoginForm({ onSwitchToRegister }) {
       <h2 style={{ fontSize: "22px", fontWeight: "600", marginBottom: "20px", color: "#111" }}>
         Login
       </h2>
+
       <form onSubmit={handleLogin}>
         <div style={{ marginBottom: "16px" }}>
           <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "6px" }}>
@@ -100,6 +110,7 @@ function LoginForm({ onSwitchToRegister }) {
             }}
           />
         </div>
+
         <div style={{ marginBottom: "16px" }}>
           <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "6px" }}>
             Password
@@ -119,20 +130,38 @@ function LoginForm({ onSwitchToRegister }) {
           />
         </div>
 
+        {/* ⚠️ Clean Error Box */}
         {error && (
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
             style={{
-              backgroundColor: "#fef7f0",
-              border: "1px solid #f9c9c9",
-              color: "#d93025",
-              padding: "12px",
-              borderRadius: "8px",
-              fontSize: "14px",
-              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              backgroundColor: "#fff5f5",
+              border: "1px solid #fca5a5",
+              color: "#b91c1c",
+              padding: "12px 14px",
+              borderRadius: "10px",
+              fontSize: "15px",
+              fontWeight: "500",
+              marginBottom: "18px",
+              boxShadow: "0 2px 8px rgba(255, 0, 0, 0.05)",
             }}
           >
-            {error}
-          </div>
+            {" "}
+            <span>
+              {error === "invalid-credentials"
+                ? "Invalid credentials. Try again."
+                : error === "user-not-found"
+                ? "No account found with this email."
+                : error === "invalid-email"
+                ? "Invalid email format."
+                : "Something went wrong. Please try again."}
+            </span>
+          </motion.div>
         )}
 
         <motion.button
@@ -156,9 +185,6 @@ function LoginForm({ onSwitchToRegister }) {
           {isLoading ? "Signing in..." : "Login"}
         </motion.button>
       </form>
-
-      {/* Switch to Register */}
-      
     </motion.div>
   );
 }
