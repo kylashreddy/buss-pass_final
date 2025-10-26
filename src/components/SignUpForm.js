@@ -20,6 +20,11 @@ function RegisterForm({ onSwitchToLogin }) {
     setIsLoading(true);
 
     try {
+      // ✅ Email domain validation
+      if (!email.endsWith("@jainuniversity.ac.in")) {
+        throw new Error("Only Jain University email IDs are allowed.");
+      }
+
       // ✅ Check for duplicate USN or Email in Firestore
       const usersRef = collection(db, "users");
       const usnQuery = query(usersRef, where("usn", "==", usn));
@@ -37,21 +42,20 @@ function RegisterForm({ onSwitchToLogin }) {
         throw new Error("Email already exists. Please use a different one.");
       }
 
-      // ✅ Create new Firebase Auth user
+      // ✅ Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // ✅ Save extra user info to Firestore
+      // ✅ Save extra info to Firestore
       await setDoc(doc(db, "users", user.uid), {
         fullName,
         usn,
         email,
       });
 
-      // ✅ Navigate after successful registration
       navigate("/home");
 
-      // Clear fields
+      // ✅ Clear inputs
       setFullName("");
       setUsn("");
       setEmail("");
@@ -114,13 +118,14 @@ function RegisterForm({ onSwitchToLogin }) {
             type="text"
             placeholder="Enter your USN"
             value={usn}
-            onChange={(e) => setUsn(e.target.value)}
+            onChange={(e) => setUsn(e.target.value.toUpperCase())} // ✅ Force uppercase
             required
             style={{
               width: "100%",
               padding: "12px",
               border: "1px solid #ccc",
               borderRadius: "8px",
+              textTransform: "uppercase", // ✅ Display always uppercase
             }}
           />
         </div>
@@ -134,7 +139,7 @@ function RegisterForm({ onSwitchToLogin }) {
             type="email"
             placeholder="e.g. user@jainuniversity.ac.in"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value.trim())}
             required
             style={{
               width: "100%",
@@ -204,8 +209,6 @@ function RegisterForm({ onSwitchToLogin }) {
           {isLoading ? "Registering..." : "Register"}
         </motion.button>
       </form>
-
-      
     </motion.div>
   );
 }

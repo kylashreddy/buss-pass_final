@@ -1,7 +1,7 @@
 // src/components/BusPassRequestForm.js
 import React, { useState, useEffect } from 'react';
 import { db, auth, storage } from '../firebase';
-import { collection, addDoc, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { motion } from 'framer-motion';
 import { Bus, MapPin, Route as RouteIcon, GraduationCap, Image as ImageIcon, Receipt } from 'lucide-react';
@@ -61,6 +61,9 @@ function BusPassRequestForm() {
   const [paymentReceiptFile, setPaymentReceiptFile] = useState(null);
   const [paymentReceiptPreview, setPaymentReceiptPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [hasActiveApplication, setHasActiveApplication] = useState(false);
+  const [existingApplication, setExistingApplication] = useState(null);
+  const [checkingApplications, setCheckingApplications] = useState(true);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -85,6 +88,50 @@ function BusPassRequestForm() {
     };
     fetchUserData();
   }, []);
+
+  // After user data loads, check for any existing pending/approved applications
+  useEffect(() => {
+    const checkExistingApplications = async () => {
+      if (!auth.currentUser) {
+        setCheckingApplications(false);
+        return;
+      }
+      setCheckingApplications(true);
+      try {
+        const uid = auth.currentUser.uid;
+        for (const route of Object.keys(routeData)) {
+          const routeCollection = route.toLowerCase().replace(/\s+/g, "-");
+          try {
+            const q = query(
+              collection(db, routeCollection),
+              where("studentId", "==", uid),
+              where("status", "in", ["pending", "approved"])
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              const docSnap = snap.docs[0];
+              setExistingApplication({ id: docSnap.id, ...docSnap.data(), routeCollection });
+              setHasActiveApplication(true);
+              break;
+            }
+          } catch (e) {
+            // ignore errors for individual route collections and continue
+          }
+        }
+      } catch (e) {
+        console.error('Error checking existing applications:', e);
+      } finally {
+        setCheckingApplications(false);
+      }
+    };
+
+    if (!loadingUserData && auth.currentUser) {
+      checkExistingApplications();
+    } else {
+      // if no user/loading state, stop checking
+      setCheckingApplications(false);
+    }
+  }, [loadingUserData]);
 
   // Handle photo file selection
   const handlePhotoChange = (e) => {
@@ -168,6 +215,15 @@ function BusPassRequestForm() {
       return;
     }
 
+    if (hasActiveApplication) {
+      setError(
+        existingApplication && existingApplication.status
+          ? `You already have an active application (status: ${existingApplication.status}). You cannot apply again.`
+          : 'You already have an active bus pass application and cannot apply again at this time.'
+      );
+      return;
+    }
+
     const requireYear = profileType !== 'teacher';
     if (!routeName || !pickupPoint || (requireYear && !year)) {
       setError(requireYear
@@ -179,6 +235,12 @@ function BusPassRequestForm() {
 
     if (!photoFile) {
       setError("Please upload your photo.");
+      return;
+    }
+
+    // Payment receipt is now required
+    if (!paymentReceiptFile) {
+      setError("Please upload the payment receipt.");
       return;
     }
 
@@ -200,11 +262,11 @@ function BusPassRequestForm() {
       // Convert "Route 1" → "route-1"
       const routeCollection = routeName.toLowerCase().replace(/\s+/g, "-");
 
-      // Save to Firestore
+      // Save to Firestore — guard against undefined user fields
       await addDoc(collection(db, routeCollection), {
         studentId: auth.currentUser.uid,
-        usn: currentUserData.usn,
-        studentName: currentUserData.name,
+        usn: (currentUserData && currentUserData.usn) ? currentUserData.usn : (auth.currentUser.email || null),
+        studentName: (currentUserData && currentUserData.name) ? currentUserData.name : (auth.currentUser.displayName || null),
         routeName,
         pickupPoint,
         year: profileType !== 'teacher' ? year : null,
@@ -300,7 +362,22 @@ function BusPassRequestForm() {
           <li>Fast approval by admin</li>
         </ul>
 
-        <form onSubmit={handleSubmit}>
+        {checkingApplications ? (
+          <div style={{ padding: 12, textAlign: 'center' }}>Checking your existing bus pass applications...</div>
+        ) : hasActiveApplication ? (
+          <div style={{ padding: 16, border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff' }}>
+            <h3 style={{ marginTop: 0 }}>You have an active application</h3>
+            <div style={{ color: '#374151' }}>
+              <p style={{ margin: '6px 0' }}>Status: <strong>{existingApplication?.status || '—'}</strong></p>
+              <p style={{ margin: '6px 0' }}>Route: <strong>{existingApplication?.routeName || existingApplication?.routeCollection || '—'}</strong></p>
+              {existingApplication?.requestDate && (
+                <p style={{ margin: '6px 0' }}>Applied on: <strong>{(existingApplication.requestDate && existingApplication.requestDate.toDate) ? existingApplication.requestDate.toDate().toLocaleString() : (existingApplication.requestDate && existingApplication.requestDate.seconds ? new Date(existingApplication.requestDate.seconds * 1000).toLocaleString() : String(existingApplication.requestDate))}</strong></p>
+              )}
+              <div className="help-text">You cannot submit a new request while this application is pending or approved. Contact admin for changes.</div>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
           <div className="form-grid">
             {/* Route Dropdown */}
             <div className="field">
@@ -415,17 +492,18 @@ function BusPassRequestForm() {
               <div className="help-text">This photo will appear on your bus pass</div>
             </div>
 
-            {/* Payment Receipt Upload */}
+            {/* Payment Receipt Upload (now required) */}
             <div className="field">
               <div className="label-row">
                 <span className="icon-badge-sm"><Receipt size={16} /></span>
-                <label htmlFor="receiptUpload">Upload Payment Receipt (optional)</label>
+                <label htmlFor="receiptUpload">Upload Payment Receipt *</label>
               </div>
               <input 
                 type="file" 
                 id="receiptUpload"
                 accept="image/*"
                 onChange={handlePaymentReceiptChange}
+                required
                 style={{ padding: '8px' }}
               />
               {paymentReceiptPreview && (
@@ -442,6 +520,7 @@ function BusPassRequestForm() {
                   />
                 </div>
               )}
+              <div className="help-text">Upload payment receipt for fee verification (required)</div>
             </div>
 
             {/* Notes */}
@@ -465,7 +544,7 @@ function BusPassRequestForm() {
               {uploading ? 'Uploading...' : 'Submit Request'}
             </motion.button>
           </div>
-        </form>
+  </form>) }
 
         {submissionStatus === 'success' && (
           <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} style={{ color: 'green', marginTop: '10px' }}>✅ Request submitted successfully!</motion.p>
