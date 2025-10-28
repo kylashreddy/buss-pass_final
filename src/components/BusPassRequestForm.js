@@ -263,10 +263,13 @@ function BusPassRequestForm() {
       const routeCollection = routeName.toLowerCase().replace(/\s+/g, "-");
 
       // Save to Firestore — guard against undefined user fields
+      // Prefer `name`, but fall back to legacy `fullName` for older user docs
+      const resolvedName = (currentUserData && (currentUserData.name || currentUserData.fullName)) ? (currentUserData.name || currentUserData.fullName) : (auth.currentUser.displayName || null);
+      const resolvedUsn = (currentUserData && currentUserData.usn) ? currentUserData.usn : (auth.currentUser.email || null);
       await addDoc(collection(db, routeCollection), {
         studentId: auth.currentUser.uid,
-        usn: (currentUserData && currentUserData.usn) ? currentUserData.usn : (auth.currentUser.email || null),
-        studentName: (currentUserData && currentUserData.name) ? currentUserData.name : (auth.currentUser.displayName || null),
+        usn: resolvedUsn,
+        studentName: resolvedName,
         routeName,
         pickupPoint,
         year: profileType !== 'teacher' ? year : null,
@@ -279,7 +282,7 @@ function BusPassRequestForm() {
       });
 
       setSubmissionStatus("success");
-      setRouteName("");
+  setRouteName("");
       setPickupPoint("");
       setYear("");
       setProfileType("student");
@@ -351,7 +354,9 @@ function BusPassRequestForm() {
               fontSize: window.innerWidth <= 768 ? 11 : 12, 
               color: '#6b7280',
               textAlign: window.innerWidth <= 480 ? 'left' : 'right'
-            }}>Logged in as {currentUserData.name} ({currentUserData.usn})</span>
+            }}>
+              Logged in as {(currentUserData.name || currentUserData.fullName)} ({currentUserData.usn})
+            </span>
           )}
         </div>
 

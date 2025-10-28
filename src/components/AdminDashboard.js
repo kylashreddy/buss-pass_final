@@ -175,6 +175,7 @@ function AdminDashboard({ filterProfileType = "all" }) {
             }}>📋 Pending Bus Pass Requests</h2>
             <p style={{ marginTop: 0, textAlign: "center", color: "#6b7280" }}>Filter: {label}</p>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className="btn-chip" onClick={async () => {
                     if (!window.confirm('Backfill approved teacher accounts into users collection? This will create/update user docs for approved teacher requests.')) return;
                     try {
@@ -204,7 +205,7 @@ function AdminDashboard({ filterProfileType = "all" }) {
                                 }
                                 await setDoc(userRef, {
                                     email: emailToWrite,
-                                    name: data.studentName || data.name || '',
+                                    name: data.studentName || data.name || data.fullName || '',
                                     usn: data.usn || null,
                                     role: 'teacher',
                                     updatedAt: serverTimestamp(),
@@ -218,9 +219,58 @@ function AdminDashboard({ filterProfileType = "all" }) {
                         console.error('Backfill failed:', err);
                         alert('Backfill failed: ' + err.message);
                     }
-                }} style={{ marginBottom: 8 }}>
-                    Backfill Approved Teachers
-                </button>
+                    }} style={{ marginBottom: 8 }}>
+                        Backfill Approved Teachers
+                    </button>
+
+                    {/* Backfill Students Button */}
+                    <button className="btn-chip" onClick={async () => {
+                        if (!window.confirm('Backfill approved student accounts into users collection? This will create/update user docs for approved student requests.')) return;
+                        try {
+                            const collectionsToScan = [
+                                "busPassRequests",
+                                "route-1","route-2","route-3","route-4","route-5","route-6",
+                                "route-7","route-8","route-9","route-10","route-11","route-12"
+                            ];
+                            let processed = 0;
+                            for (const col of collectionsToScan) {
+                                const q = query(collection(db, col), where('status', '==', 'approved'), where('profileType', '==', 'student'));
+                                const snap = await getDocs(q);
+                                for (const docSnap of snap.docs) {
+                                    const data = docSnap.data();
+                                    const uid = data.studentId || data.studentUID || data.userId || null;
+                                    if (!uid) continue;
+                                    const userRef = doc(db, 'users', uid);
+                                    let emailToWrite = data.email || '';
+                                    try {
+                                        const existing = await getDoc(userRef);
+                                        if (existing.exists()) {
+                                            const ex = existing.data();
+                                            if (ex && ex.email) emailToWrite = ex.email;
+                                        }
+                                    } catch (re) {
+                                        console.warn('Could not read existing user during backfill (student):', re);
+                                    }
+                                    await setDoc(userRef, {
+                                        email: emailToWrite,
+                                        name: data.studentName || data.name || data.fullName || '',
+                                        usn: data.usn || null,
+                                        role: 'student',
+                                        updatedAt: serverTimestamp(),
+                                        createdAt: data.requestDate || serverTimestamp()
+                                    }, { merge: true });
+                                    processed++;
+                                }
+                            }
+                            alert(`Backfill complete. Processed ${processed} student(s).`);
+                        } catch (err) {
+                            console.error('Backfill failed (student):', err);
+                            alert('Backfill failed: ' + err.message);
+                        }
+                    }} style={{ marginBottom: 8 }}>
+                        Backfill Approved Students
+                    </button>
+                </div>
             </div>
             {pendingRequests.length === 0 ? (
                 <p style={{ textAlign: "center" }}>No pending requests 🎉</p>

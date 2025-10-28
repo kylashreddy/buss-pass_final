@@ -47,7 +47,9 @@ function RegisterForm({ onSwitchToLogin }) {
       const user = userCredential.user;
 
       // ✅ Save extra info to Firestore
+      // Store both `name` and `fullName` to remain compatible with older code
       await setDoc(doc(db, "users", user.uid), {
+        name: fullName,
         fullName,
         usn,
         email,
